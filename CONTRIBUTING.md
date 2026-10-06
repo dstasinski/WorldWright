@@ -14,6 +14,21 @@ Development work should target the `Development` branch. Stable milestones may l
 - Keep optional AI integrations outside the core engine.
 - Add tests for core behavior as implementation begins.
 
+## Source-file size and modularity
+
+WorldWright source files must remain small enough to review, modify, and diff comfortably with the normal repository tooling.
+
+- Do not allow large monolithic Pascal units to accumulate.
+- Split units by clear responsibility before their size makes changes difficult to review or apply directly.
+- Parser, engine, GUI, persistence, rule processing, interchange, importer, and exporter functionality should be decomposed into focused units as each subsystem grows.
+- Prefer cohesive classes and helper units over placing unrelated functionality in a single source file.
+- Large generated tables, schemas, templates, or data should live in appropriate separate resource/data files rather than giant Pascal constants.
+- Refactor proactively when a unit begins accumulating multiple independent responsibilities.
+- Keep individual changes and commits reviewable where practical.
+- A design that would routinely require source diffs to be prepared or applied outside the normal GitHub workflow is a signal that the affected files should be decomposed.
+
+There is intentionally no arbitrary line-count limit. Cohesion and practical reviewability determine when a unit should be split.
+
 ## Code documentation requirement
 
 All WorldWright source code must be clearly documented so its functionality and intent can be understood and maintained by another developer without having to reverse-engineer the implementation.
