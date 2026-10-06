@@ -11,6 +11,7 @@ This document records the initial architectural direction. It is expected to evo
 5. **Cross-platform first.** Prefer FreePascal RTL/FCL and Lazarus LCL over platform-specific APIs.
 6. **Separation of concerns.** Core, parser, engine, builder, persistence, GUI, exporters, and optional services remain separated.
 7. **AI is optional.** Future AI providers may suggest content but must not become a dependency of the world engine.
+8. **Single-window interface.** WorldWright should present authoring, play, inspection, mapping, rules, conversations, reports, and related tools within one main application window using panes and workspace views rather than a collection of independent editor windows.
 
 ## Planned modules
 
@@ -30,7 +31,7 @@ Author commands such as `@ROOM`, `@OBJECT`, `@DESCRIBE`, `@CONNECT`, `@MOVE`, `@
 Stores/restores projects. SQLite is the planned primary storage mechanism. Persistence must not define game semantics.
 
 ### GUI
-Lazarus/LCL application layer: playable interface, world tree, property editors, map, rule editor, NPC/conversation tools, project management and validation UI.
+Lazarus/LCL application layer built around one main window: playable interface, world tree, Lazarus-inspired property inspector, map, rule editor, NPC/conversation tools, project management and validation UI. Complex editors should appear as panes or workspace views inside the main window rather than separate top-level windows.
 
 ### Exporters
 Target-specific generators. Initial target: Inform 7. Planned later target: TADS 3. Exporters consume the neutral world model and must not dictate its design.
@@ -48,10 +49,12 @@ Parser -> Engine ----> |
                        +----> Optional AI context/services
 ```
 
-Exact package/unit boundaries will be decided when implementation begins.
+Exact package/unit boundaries will be refined as implementation proceeds.
 
 ## Testing
 
 Core logic should be testable without starting the GUI. Console/unit tests should cover the world model, parser, engine, builder operations, persistence and exporters.
+
+Automated compilation and tests run through GitHub Actions. ChatGPT does not compile or execute WorldWright in its own environment unless explicitly requested.
 
 Cross-platform behavior should be considered from the first implementation commit.
