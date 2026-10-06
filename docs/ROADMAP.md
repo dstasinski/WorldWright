@@ -6,9 +6,9 @@ This roadmap captures the current concept. Dates are intentionally omitted.
 
 **Goal: Build a small adventure by playing it.**
 
-Rooms/descriptions, exits/movement, basic objects, inventory and containment; player commands such as LOOK, EXAMINE, TAKE, DROP, INVENTORY and directions; builder commands such as @ROOM, @DESCRIBE, @OBJECT, @CONNECT, @MOVE, @RENAME and @DELETE; SQLite persistence; simple Lazarus/LCL interface; core tests independent of the GUI.
+Rooms/descriptions, exits/movement, basic objects, inventory and containment; player commands such as LOOK, EXAMINE, TAKE, DROP, INVENTORY and directions; builder commands such as @ROOM, @DESCRIBE, @OBJECT, @CONNECT, @MOVE, @RENAME and @DELETE; SQLite persistence; an initial versioned WorldWright-native interchange specification and importer/exporter for the Stage 1 model; simple Lazarus/LCL interface; core tests independent of the GUI.
 
-Success criterion: create, save, reload and play a small multi-room adventure primarily from the command interface.
+Success criterion: create, save, reload and play a small multi-room adventure primarily from the command interface. The same Stage 1 world must also be constructible from a validated WorldWright interchange document so external tools and future AI services have a stable, documented entry point from the beginning.
 
 ## Stage 2 — Useful World Builder
 
