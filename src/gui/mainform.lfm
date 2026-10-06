@@ -1,0 +1,107 @@
+object WorldWrightMainForm: TWorldWrightMainForm
+  Left = 300
+  Height = 700
+  Top = 150
+  Width = 1100
+  Caption = 'WorldWright - Build your adventure from the inside.'
+  ClientHeight = 700
+  ClientWidth = 1100
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  LCLVersion = '4.8.0.0'
+  object LeftPanel: TPanel
+    Left = 0
+    Height = 700
+    Top = 0
+    Width = 220
+    Align = alLeft
+    BevelOuter = bvNone
+    Caption = ''
+    ClientHeight = 700
+    ClientWidth = 220
+    TabOrder = 0
+    object WorldTree: TTreeView
+      Left = 0
+      Height = 700
+      Top = 0
+      Width = 220
+      Align = alClient
+      TabOrder = 0
+    end
+  end
+  object SplitLeft: TSplitter
+    Left = 220
+    Height = 700
+    Top = 0
+    Width = 5
+  end
+  object RightPanel: TPanel
+    Left = 820
+    Height = 700
+    Top = 0
+    Width = 280
+    Align = alRight
+    BevelOuter = bvNone
+    Caption = ''
+    ClientHeight = 700
+    ClientWidth = 280
+    TabOrder = 2
+    object InspectorGrid: TStringGrid
+      Left = 0
+      Height = 700
+      Top = 0
+      Width = 280
+      Align = alClient
+      ColCount = 2
+      FixedCols = 0
+      RowCount = 5
+      TabOrder = 0
+      Cells = (
+        0
+        0
+        'Property'
+        1
+        0
+        'Value'
+      )
+    end
+  end
+  object SplitRight: TSplitter
+    Left = 815
+    Height = 700
+    Top = 0
+    Width = 5
+    Align = alRight
+  end
+  object CommandPanel: TPanel
+    Left = 225
+    Height = 34
+    Top = 666
+    Width = 590
+    Align = alBottom
+    BevelOuter = bvNone
+    Caption = ''
+    ClientHeight = 34
+    ClientWidth = 590
+    TabOrder = 3
+    object CommandEdit: TEdit
+      Left = 0
+      Height = 34
+      Top = 0
+      Width = 590
+      Align = alClient
+      TabOrder = 0
+      TextHint = 'Enter a player command or @builder command...'
+    end
+  end
+  object WorkspaceMemo: TMemo
+    Left = 225
+    Height = 666
+    Top = 0
+    Width = 590
+    Align = alClient
+    ReadOnly = True
+    ScrollBars = ssAutoVertical
+    TabOrder = 4
+  end
+end
