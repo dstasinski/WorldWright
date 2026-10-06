@@ -15,6 +15,11 @@
     <BuildModes Count="1">
       <Item1 Name="Default" Default="True"/>
     </BuildModes>
+    <RequiredPackages Count="1">
+      <Item1>
+        <PackageName Value="LCL"/>
+      </Item1>
+    </RequiredPackages>
     <Units Count="2">
       <Unit0>
         <Filename Value="worldwright.lpr"/>
