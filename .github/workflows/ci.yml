@@ -1,0 +1,41 @@
+name: WorldWright CI
+
+on:
+  push:
+    branches: [Development]
+  pull_request:
+    branches: [Development]
+
+jobs:
+  core:
+    name: Core tests (Free Pascal)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Free Pascal
+        run: sudo apt-get update && sudo apt-get install -y fp-compiler fp-units-fcl
+
+      - name: Build core smoke test
+        run: |
+          mkdir -p build
+          fpc -B -Fu./src/core -FU./build -FE./build tests/core/test_world.pas
+
+      - name: Run core smoke test
+        run: ./build/test_world
+
+  linux-gui:
+    name: Linux GUI compile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Lazarus
+        run: sudo apt-get update && sudo apt-get install -y lazarus
+
+      - name: Compile WorldWright
+        run: |
+          mkdir -p build
+          lazbuild --build-mode=Default src/worldwright.lpi
