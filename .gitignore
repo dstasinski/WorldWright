@@ -1,0 +1,39 @@
+# Lazarus / FreePascal
+lib/
+build/
+bin/
+*.o
+*.ppu
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.compiled
+*.res
+*.or
+*.lps
+*.lpi.bak
+*.lfm.bak
+*.pas.bak
+*.bak
+backup/
+
+# Debug/profiling
+*.dbg
+*.map
+heap.trc
+
+# Local databases/test output
+*.sqlite
+*.sqlite3
+*.db
+test-output/
+coverage/
+
+# OS/editors
+.DS_Store
+Thumbs.db
+*~
+.vscode/
+.idea/
