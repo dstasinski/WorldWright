@@ -9,10 +9,10 @@ on:
 jobs:
   core:
     name: Core tests (Free Pascal)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Free Pascal
         run: sudo apt-get update && sudo apt-get install -y fp-compiler fp-units-fcl
@@ -27,15 +27,15 @@ jobs:
 
   linux-gui:
     name: Linux GUI compile
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Lazarus
         run: sudo apt-get update && sudo apt-get install -y lazarus
 
-      - name: Compile WorldWright
+      - name: Compile WorldWright with GTK2
         run: |
           mkdir -p build
-          lazbuild --build-mode=Default src/worldwright.lpi
+          lazbuild --widgetset=gtk2 --build-mode=Default src/worldwright.lpi
