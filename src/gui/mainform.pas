@@ -69,22 +69,30 @@ end;
 
 procedure TWorldWrightMainForm.BuildStarterWorld;
 var
-  Room: TWorldRoom;
+  Laboratory, Hallway: TWorldRoom;
 begin
-  Room := FWorld.AddRoom('laboratory', 'Laboratory');
-  Room.Description := 'A dusty laboratory filled with abandoned equipment.';
+  Laboratory := FWorld.AddRoom('laboratory', 'Laboratory');
+  Laboratory.Description :=
+    'A dusty laboratory filled with abandoned equipment.';
+
+  Hallway := FWorld.AddRoom('hallway', 'Hallway');
+  Hallway.Description :=
+    'A narrow hallway stretches past a row of closed doors.';
+
+  Laboratory.Connect(wdNorth, Hallway);
+  Hallway.Connect(wdSouth, Laboratory);
 end;
 
 procedure TWorldWrightMainForm.RefreshWorldView;
 var
-  WorldNode, RoomNode: TTreeNode;
+  WorldNode: TTreeNode;
   Room: TWorldRoom;
 begin
   WorldTree.Items.Clear;
   WorldNode := WorldTree.Items.Add(nil, 'World');
 
   for Room in FWorld.Rooms do
-    RoomNode := WorldTree.Items.AddChild(WorldNode, Room.Name);
+    WorldTree.Items.AddChild(WorldNode, Room.Name);
 
   WorldNode.Expand(True);
 
@@ -129,6 +137,7 @@ begin
   if Response <> '' then
     WorkspaceMemo.Lines.Add(Response);
 
+  RefreshWorldView;
   CommandEdit.Clear;
   WorkspaceMemo.SelStart := Length(WorkspaceMemo.Text);
 end;
