@@ -34,6 +34,9 @@ begin
 end;
 
 function TGameSession.DescribeCurrentRoom: string;
+var
+  WorldObject: TWorldObject;
+  ObjectsText: string;
 begin
   if FCurrentRoom = nil then
     Exit('You are nowhere.');
@@ -41,6 +44,17 @@ begin
   Result := FCurrentRoom.Name;
   if Trim(FCurrentRoom.Description) <> '' then
     Result := Result + LineEnding + FCurrentRoom.Description;
+
+  ObjectsText := '';
+  for WorldObject in FWorld.Objects do
+    if WorldObject.Room = FCurrentRoom then
+    begin
+      if ObjectsText <> '' then
+        ObjectsText := ObjectsText + ', ';
+      ObjectsText := ObjectsText + WorldObject.Name;
+    end;
+  if ObjectsText <> '' then
+    Result := Result + LineEnding + 'You can see ' + ObjectsText + ' here.';
 end;
 
 function TGameSession.Move(ADirection: TWorldDirection): string;
