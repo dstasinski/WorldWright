@@ -37,13 +37,20 @@ begin
     Check(BrassKey.Room = Laboratory, 'object room was not retained');
     Check(BrassKey.Description <> '', 'object description was not retained');
 
+    BrassKey.DistinguishingText := 'tarnished';
     OtherKey := World.AddObject('brass_key_2', 'brass key', Laboratory);
+    OtherKey.DistinguishingText := 'shiny';
     ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'brass key',
       ResolvedObject);
     Check(ResolveStatus = orsAmbiguous,
       'duplicate object names were not reported as ambiguous');
     Check(ResolvedObject = nil,
       'ambiguous object lookup returned an arbitrary object');
+
+    ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'shiny brass key',
+      ResolvedObject);
+    Check((ResolveStatus = orsUnique) and (ResolvedObject = OtherKey),
+      'distinguishing phrase did not resolve the exact room object');
 
     ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'brass_key_2',
       ResolvedObject);
