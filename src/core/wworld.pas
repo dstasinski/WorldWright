@@ -104,13 +104,13 @@ end;
 procedure TWorldRoom.Connect(ADirection: TWorldDirection;
   ADestination: TWorldRoom);
 var
-  Exit: TWorldExit;
+  RoomExit: TWorldExit;
 begin
-  for Exit in FExits do
-    if Exit.Direction = ADirection then
+  for RoomExit in FExits do
+    if RoomExit.Direction = ADirection then
     begin
-      FExits.Remove(Exit);
-      Exit.Free;
+      FExits.Remove(RoomExit);
+      RoomExit.Free;
       Break;
     end;
   FExits.Add(TWorldExit.Create(ADirection, ADestination));
@@ -118,11 +118,11 @@ end;
 
 function TWorldRoom.ExitTo(ADirection: TWorldDirection): TWorldRoom;
 var
-  Exit: TWorldExit;
+  RoomExit: TWorldExit;
 begin
-  for Exit in FExits do
-    if Exit.Direction = ADirection then
-      Exit(Exit.Destination);
+  for RoomExit in FExits do
+    if RoomExit.Direction = ADirection then
+      Exit(RoomExit.Destination);
   Result := nil;
 end;
 
