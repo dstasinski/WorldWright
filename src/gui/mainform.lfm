@@ -32,6 +32,7 @@ object WorldWrightMainForm: TWorldWrightMainForm
       Width = 220
       Align = alClient
       ReadOnly = True
+      OnDblClick = WorldTreeDblClick
       OnSelectionChanged = WorldTreeSelectionChanged
       TabOrder = 0
     end
