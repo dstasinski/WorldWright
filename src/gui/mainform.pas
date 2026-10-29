@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Grids,
-  WWorld, WGameSession;
+  WWorld, WGameSession, WBuilderSession;
 
 type
   { TWorldWrightMainForm is WorldWright's single top-level application window.
@@ -30,6 +30,7 @@ type
   private
     FWorld: TWorld;
     FSession: TGameSession;
+    FBuilder: TBuilderSession;
     procedure BuildStarterWorld;
     procedure RefreshWorldView;
     procedure SubmitCommand;
@@ -47,6 +48,7 @@ begin
   FWorld := TWorld.Create;
   BuildStarterWorld;
   FSession := TGameSession.Create(FWorld);
+  FBuilder := TBuilderSession.Create(FWorld);
   RefreshWorldView;
 
   WorkspaceMemo.Clear;
@@ -58,6 +60,7 @@ end;
 
 procedure TWorldWrightMainForm.FormDestroy(Sender: TObject);
 begin
+  FBuilder.Free;
   FSession.Free;
   FWorld.Free;
 end;
@@ -133,7 +136,10 @@ begin
   WorkspaceMemo.Lines.Add('');
   WorkspaceMemo.Lines.Add('> ' + Command);
 
-  Response := FSession.ExecuteCommand(Command);
+  if Command[1] = '@' then
+    Response := FBuilder.ExecuteCommand(Command)
+  else
+    Response := FSession.ExecuteCommand(Command);
   if Response <> '' then
     WorkspaceMemo.Lines.Add(Response);
 
