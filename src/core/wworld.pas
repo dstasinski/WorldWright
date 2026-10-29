@@ -82,6 +82,7 @@ type
   TWorldObject = class(TWorldEntity)
   private
     FDescription: string;
+    FDistinguishingText: string;
     FRoom: TWorldRoom;
     FLocationKind: TWorldObjectLocationKind;
   public
@@ -89,6 +90,10 @@ type
     procedure MoveToRoom(ARoom: TWorldRoom);
     procedure MoveToPlayerInventory;
     property Description: string read FDescription write FDescription;
+    { Short author-facing/player-facing qualifier used to distinguish objects
+      that intentionally share the same display name. }
+    property DistinguishingText: string read FDistinguishingText
+      write FDistinguishingText;
     property LocationKind: TWorldObjectLocationKind read FLocationKind;
     property Room: TWorldRoom read FRoom;
   end;
