@@ -110,6 +110,8 @@ type
       out AObject: TWorldObject): TObjectResolveStatus;
     function ResolveObjectInInventory(const ANameOrID: string;
       out AObject: TWorldObject): TObjectResolveStatus;
+    function ResolveVisibleObject(ARoom: TWorldRoom; const ANameOrID: string;
+      out AObject: TWorldObject): TObjectResolveStatus;
     { DeleteRoom also removes objects located in ARoom and exits that target
       it, preserving pointer integrity before the room is freed. }
     procedure DeleteRoom(ARoom: TWorldRoom);
@@ -294,6 +296,55 @@ begin
       if MatchCount = 1 then
         AObject := WorldObject;
     end;
+
+  case MatchCount of
+    0: Result := orsNotFound;
+    1: Result := orsUnique;
+  else
+    begin
+      AObject := nil;
+      Result := orsAmbiguous;
+    end;
+  end;
+end;
+
+function TWorld.ResolveVisibleObject(ARoom: TWorldRoom;
+  const ANameOrID: string; out AObject: TWorldObject): TObjectResolveStatus;
+var
+  WorldObject: TWorldObject;
+  MatchCount: Integer;
+  ReferenceText: string;
+  IsVisible: Boolean;
+begin
+  AObject := nil;
+  ReferenceText := Trim(ANameOrID);
+
+  { Visibility currently consists of the current room plus player inventory.
+    Keep this rule in the model so EXAMINE and later visible-object verbs share
+    one definition as containment and supporters are introduced. }
+  for WorldObject in FObjects do
+  begin
+    IsVisible := (WorldObject.LocationKind = olPlayerInventory) or
+      ((WorldObject.LocationKind = olRoom) and (WorldObject.Room = ARoom));
+    if IsVisible and SameText(WorldObject.ID, ReferenceText) then
+    begin
+      AObject := WorldObject;
+      Exit(orsUnique);
+    end;
+  end;
+
+  MatchCount := 0;
+  for WorldObject in FObjects do
+  begin
+    IsVisible := (WorldObject.LocationKind = olPlayerInventory) or
+      ((WorldObject.LocationKind = olRoom) and (WorldObject.Room = ARoom));
+    if IsVisible and SameText(WorldObject.Name, ReferenceText) then
+    begin
+      Inc(MatchCount);
+      if MatchCount = 1 then
+        AObject := WorldObject;
+    end;
+  end;
 
   case MatchCount of
     0: Result := orsNotFound;
