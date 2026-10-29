@@ -15,6 +15,7 @@ type
     FCurrentRoom: TWorldRoom;
     function DescribeCurrentRoom: string;
     function Move(ADirection: TWorldDirection): string;
+    function Examine(const ANounPhrase: string): string;
   public
     constructor Create(AWorld: TWorld);
     function ExecuteCommand(const ACommand: string): string;
@@ -72,6 +73,21 @@ begin
   Result := DescribeCurrentRoom;
 end;
 
+function TGameSession.Examine(const ANounPhrase: string): string;
+var
+  WorldObject: TWorldObject;
+begin
+  for WorldObject in FWorld.Objects do
+    if (WorldObject.Room = FCurrentRoom) and
+      SameText(WorldObject.Name, Trim(ANounPhrase)) then
+    begin
+      if Trim(WorldObject.Description) <> '' then
+        Exit(WorldObject.Description);
+      Exit('You see nothing special about the ' + WorldObject.Name + '.');
+    end;
+  Result := 'You do not see "' + Trim(ANounPhrase) + '" here.';
+end;
+
 function TGameSession.ExecuteCommand(const ACommand: string): string;
 var
   Parsed: TParsedPlayerCommand;
@@ -85,6 +101,8 @@ begin
       Result := DescribeCurrentRoom;
     pcMove:
       Result := Move(Parsed.Direction);
+    pcExamine:
+      Result := Examine(Parsed.NounPhrase);
   else
     Result := 'I do not understand "' + Trim(ACommand) + '".';
   end;
