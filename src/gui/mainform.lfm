@@ -31,6 +31,7 @@ object WorldWrightMainForm: TWorldWrightMainForm
       Top = 0
       Width = 220
       Align = alClient
+      PopupMenu = WorldTreePopupMenu
       ReadOnly = True
       OnDblClick = WorldTreeDblClick
       OnSelectionChanged = WorldTreeSelectionChanged
@@ -117,6 +118,15 @@ object WorldWrightMainForm: TWorldWrightMainForm
       ReadOnly = True
       ScrollBars = ssAutoVertical
       TabOrder = 0
+    end
+  end
+  object WorldTreePopupMenu: TPopupMenu
+    OnPopup = WorldTreePopupMenuPopup
+    left = 32
+    top = 32
+    object GoHereMenuItem: TMenuItem
+      Caption = 'Go Here'
+      OnClick = GoHereMenuItemClick
     end
   end
 end
