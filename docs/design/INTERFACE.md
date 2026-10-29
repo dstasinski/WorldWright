@@ -27,3 +27,26 @@ Panels should eventually be resizable and collapsible. Play mode may therefore p
 ## Architectural rule
 
 The GUI is a view/editor of the same neutral live world model used by parser commands, builder commands, persistence, validation, importers, and exporters. Changing an entity through the inspector and changing it through an @builder command must ultimately use the same model operations.
+
+
+## Authoring play and world-tree navigation
+
+WorldWright's interactive runtime is primarily part of the **authoring, preview, and debugging workflow**. Authors will not typically be playing their project as a protected attempt to "win." Moving through the world, manipulating objects, and exercising parser commands are ways to inspect and test the work in progress. The interface should therefore favor rapid iteration while still keeping ordinary player semantics distinct from authoring operations.
+
+The World Tree must preserve the distinction between **selection** and **author navigation**:
+
+- A single click selects a room or entity for inspection/editing. Selection alone must not move the player or otherwise mutate runtime state.
+- A double click on a room performs an authoring jump to that room.
+- A room context menu should eventually expose the same operation as **Go Here**, providing a discoverable alternative to double click.
+- A future toolbar or inspector action may expose the same operation if useful.
+
+An authoring jump is not ordinary player movement. It does not require a connecting exit and must allow the author to reach otherwise inaccessible locations, including locations behind locked doors or incomplete world topology. The operation should use the same underlying builder/session operation as the builder room-jump command rather than duplicating navigation logic in the GUI.
+
+As richer rules and events are added, authoring jumps should not automatically acquire ordinary traversal semantics. In particular, jumping to a room should not imply that an exit was traversed, a door was opened, or a movement puzzle was solved. Entry/movement rule execution for author jumps must be an explicit design choice rather than an accidental consequence of sharing player movement code.
+
+This distinction gives WorldWright two complementary navigation paths:
+
+- **Player movement** exercises the authored game and its normal movement rules.
+- **Author navigation** rapidly positions the live preview/debug session where the author needs to inspect or modify the world.
+
+The live session remains useful precisely because both paths operate on the same world and runtime state, while their intent and side effects remain clearly separated.
