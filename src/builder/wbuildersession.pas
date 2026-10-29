@@ -369,6 +369,8 @@ begin
     Exit(CreateObject(Argument));
   if SameText(Command, '@DESCRIBEOBJECT') then
     Exit(DescribeObject(Argument));
+  if SameText(Command, '@DISTINGUISH') then
+    Exit(DistinguishObject(Argument));
   if SameText(Command, '@DESCRIBE') then
     Exit(DescribeRoom(Argument));
   if SameText(Command, '@RENAME') then
