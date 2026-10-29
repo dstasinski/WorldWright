@@ -37,9 +37,9 @@ begin
     Check(BrassKey.Room = Laboratory, 'object room was not retained');
     Check(BrassKey.Description <> '', 'object description was not retained');
 
-    BrassKey.Tag := 'tarnished';
+    BrassKey.Tag := 'a tarnished brass key';
     OtherKey := World.AddObject('brass_key_2', 'brass key', Laboratory);
-    OtherKey.Tag := 'shiny';
+    OtherKey.Tag := 'a shiny brass key';
     ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'brass key',
       ResolvedObject);
     Check(ResolveStatus = orsAmbiguous,
@@ -47,7 +47,7 @@ begin
     Check(ResolvedObject = nil,
       'ambiguous object lookup returned an arbitrary object');
 
-    ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'shiny brass key',
+    ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'a shiny brass key',
       ResolvedObject);
     Check((ResolveStatus = orsUnique) and (ResolvedObject = OtherKey),
       'tag phrase did not resolve the exact room object');
@@ -65,7 +65,7 @@ begin
     Check(BrassKey.Room = nil,
       'inventory object retained a stale room reference');
 
-    ResolveStatus := World.ResolveObjectInInventory('tarnished brass key',
+    ResolveStatus := World.ResolveObjectInInventory('a tarnished brass key',
       ResolvedObject);
     Check((ResolveStatus = orsUnique) and (ResolvedObject = BrassKey),
       'inventory lookup did not resolve an exact tag phrase');
