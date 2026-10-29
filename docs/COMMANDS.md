@@ -47,7 +47,8 @@ player inventory.
 Object names are not required to be globally unique. If exactly one visible
 object has the requested name, it is examined. If multiple visible objects have
 the same name, including one carried object and one same-named room object,
-WorldWright reports the ambiguity rather than arbitrarily choosing one.
+WorldWright reports the ambiguity rather than arbitrarily choosing one. It
+presents numbered candidates; entering a number examines that exact object.
 
 Examples:
 
@@ -65,8 +66,8 @@ nothing special about it.
 **Alias:** `GET <object>`
 
 Moves an unambiguous object from the current room into player inventory. If
-multiple room objects have the requested name, WorldWright reports ambiguity
-and takes nothing.
+multiple room objects have the requested name, WorldWright presents numbered
+choices and takes nothing until the player chooses one.
 
 ### DROP
 
@@ -75,7 +76,7 @@ and takes nothing.
 Moves an unambiguous carried object into the current room. Object resolution is
 limited to player inventory, so a same-named object already lying in the room
 does not interfere. If multiple carried objects have the same name, WorldWright
-reports ambiguity and drops nothing.
+presents numbered choices and drops nothing until the player chooses one.
 
 ### INVENTORY
 
@@ -197,8 +198,12 @@ WorldWright's object-command behavior follows this rule:
    in the command's applicable scope.
 3. Multiple matching names are ambiguous; commands must never silently choose
    the first match.
-4. Player commands should eventually offer interactive disambiguation.
+4. For player object commands, WorldWright lists numbered matching candidates
+   and remembers the pending action. Entering a listed number applies the
+   original command to that exact object. Entering another command cancels the
+   pending choice and executes the new command normally.
 5. Builder commands report ambiguity and allow the author to use the stable ID.
+   Stable IDs are not intended to be required knowledge for ordinary players.
 
 This rule is common infrastructure for `EXAMINE`, `TAKE`, `DROP`, builder
 object editing, and future commands such as `GIVE`, container interactions,
