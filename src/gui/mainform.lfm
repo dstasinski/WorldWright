@@ -8,6 +8,7 @@ object WorldWrightMainForm: TWorldWrightMainForm
   ClientWidth = 1100
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnShow = FormShow
   Position = poScreenCenter
   LCLVersion = '4.8.0.0'
   object LeftPanel: TPanel
