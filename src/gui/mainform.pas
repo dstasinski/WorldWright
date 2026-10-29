@@ -26,6 +26,7 @@ type
     procedure CommandEditKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure FormShow(Sender: TObject);
   private
     FWorld: TWorld;
     FSession: TGameSession;
@@ -53,13 +54,17 @@ begin
   WorkspaceMemo.Lines.Add('Build your adventure from the inside.');
   WorkspaceMemo.Lines.Add('');
   WorkspaceMemo.Lines.Add(FSession.ExecuteCommand('LOOK'));
-  CommandEdit.SetFocus;
 end;
 
 procedure TWorldWrightMainForm.FormDestroy(Sender: TObject);
 begin
   FSession.Free;
   FWorld.Free;
+end;
+
+procedure TWorldWrightMainForm.FormShow(Sender: TObject);
+begin
+  CommandEdit.SetFocus;
 end;
 
 procedure TWorldWrightMainForm.BuildStarterWorld;
