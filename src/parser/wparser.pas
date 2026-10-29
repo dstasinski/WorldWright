@@ -8,13 +8,14 @@ uses
   SysUtils, WWorld;
 
 type
-  TPlayerCommandKind = (pcUnknown, pcLook, pcMove);
+  TPlayerCommandKind = (pcUnknown, pcLook, pcMove, pcExamine);
 
   { TParsedPlayerCommand is a small target-independent parser result. The
     parser recognizes intent; the engine decides what that intent does. }
   TParsedPlayerCommand = record
     Kind: TPlayerCommandKind;
     Direction: TWorldDirection;
+    NounPhrase: string;
   end;
 
 function ParsePlayerCommand(const AInput: string): TParsedPlayerCommand;
@@ -28,6 +29,7 @@ begin
   Result.Kind := pcUnknown;
   Result.Direction := wdNorth;
   Command := UpperCase(Trim(AInput));
+  Result.NounPhrase := '';
 
   if (Command = 'LOOK') or (Command = 'L') then
     Result.Kind := pcLook
@@ -50,6 +52,16 @@ begin
   begin
     Result.Kind := pcMove;
     Result.Direction := wdWest;
+  end
+  else if Pos('EXAMINE ', Command) = 1 then
+  begin
+    Result.Kind := pcExamine;
+    Result.NounPhrase := Trim(Copy(AInput, 9, MaxInt));
+  end
+  else if Pos('X ', Command) = 1 then
+  begin
+    Result.Kind := pcExamine;
+    Result.NounPhrase := Trim(Copy(AInput, 3, MaxInt));
   end;
 end;
 
