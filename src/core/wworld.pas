@@ -82,7 +82,7 @@ type
   TWorldObject = class(TWorldEntity)
   private
     FDescription: string;
-    FDistinguishingText: string;
+    FTag: string;
     FRoom: TWorldRoom;
     FLocationKind: TWorldObjectLocationKind;
   public
@@ -90,10 +90,10 @@ type
     procedure MoveToRoom(ARoom: TWorldRoom);
     procedure MoveToPlayerInventory;
     property Description: string read FDescription write FDescription;
-    { Short author-facing/player-facing qualifier used to distinguish objects
+    { Short author-facing/player-facing qualifier used to tag objects
       that intentionally share the same display name. }
-    property DistinguishingText: string read FDistinguishingText
-      write FDistinguishingText;
+    property Tag: string read FTag
+      write FTag;
     property LocationKind: TWorldObjectLocationKind read FLocationKind;
     property Room: TWorldRoom read FRoom;
   end;
@@ -253,14 +253,14 @@ begin
       Exit(orsUnique);
     end;
 
-  { A distinguishing phrase is an exact alternate player reference, not fuzzy
+  { A tag phrase is an exact alternate player reference, not fuzzy
     adjective matching. Normal display-name matching remains the next fallback. }
   MatchCount := 0;
   for WorldObject in FObjects do
     if (WorldObject.LocationKind = olRoom) and
       (WorldObject.Room = ARoom) and
-      (Trim(WorldObject.DistinguishingText) <> '') and
-      SameText(WorldObject.DistinguishingText + ' ' + WorldObject.Name,
+      (Trim(WorldObject.Tag) <> '') and
+      SameText(WorldObject.Tag + ' ' + WorldObject.Name,
         ReferenceText) then
     begin
       Inc(MatchCount);
@@ -314,13 +314,13 @@ begin
       Exit(orsUnique);
     end;
 
-  { A distinguishing phrase is an exact alternate player reference, not fuzzy
+  { A tag phrase is an exact alternate player reference, not fuzzy
     adjective matching. Normal display-name matching remains the next fallback. }
   MatchCount := 0;
   for WorldObject in FObjects do
     if (WorldObject.LocationKind = olPlayerInventory) and
-      (Trim(WorldObject.DistinguishingText) <> '') and
-      SameText(WorldObject.DistinguishingText + ' ' + WorldObject.Name,
+      (Trim(WorldObject.Tag) <> '') and
+      SameText(WorldObject.Tag + ' ' + WorldObject.Name,
         ReferenceText) then
     begin
       Inc(MatchCount);
@@ -381,14 +381,14 @@ begin
     end;
   end;
 
-  { A distinguishing phrase is an exact alternate player reference, not fuzzy
+  { A tag phrase is an exact alternate player reference, not fuzzy
     adjective matching. Normal display-name matching remains the next fallback. }
   MatchCount := 0;
   for WorldObject in FObjects do
     if (((WorldObject.LocationKind = olPlayerInventory) or
        ((WorldObject.LocationKind = olRoom) and (WorldObject.Room = ARoom)))) and
-      (Trim(WorldObject.DistinguishingText) <> '') and
-      SameText(WorldObject.DistinguishingText + ' ' + WorldObject.Name,
+      (Trim(WorldObject.Tag) <> '') and
+      SameText(WorldObject.Tag + ' ' + WorldObject.Name,
         ReferenceText) then
     begin
       Inc(MatchCount);
