@@ -5,7 +5,7 @@ unit MainForm;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Grids,
+  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Grids, Menus,
   WWorld, WGameSession, WBuilderSession;
 
 type
@@ -17,8 +17,10 @@ type
     CenterPanel: TPanel;
     CommandMemo: TMemo;
     CommandPanel: TPanel;
+    GoHereMenuItem: TMenuItem;
     InspectorGrid: TStringGrid;
     LeftPanel: TPanel;
+    WorldTreePopupMenu: TPopupMenu;
     RightPanel: TPanel;
     SplitLeft: TSplitter;
     SplitRight: TSplitter;
@@ -29,6 +31,8 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure GoHereMenuItemClick(Sender: TObject);
+    procedure WorldTreePopupMenuPopup(Sender: TObject);
     procedure WorldTreeDblClick(Sender: TObject);
     procedure WorldTreeSelectionChanged(Sender: TObject);
   private
@@ -248,6 +252,23 @@ begin
     InspectorGrid.Cells[0, 4] := 'Description';
     InspectorGrid.Cells[1, 4] := SelectedRoom.Description;
   end;
+end;
+
+procedure TWorldWrightMainForm.GoHereMenuItemClick(Sender: TObject);
+begin
+  { Context-menu navigation deliberately shares the exact double-click path,
+    which in turn routes through @MOVE and preserves builder semantics. }
+  WorldTreeDblClick(WorldTree);
+end;
+
+procedure TWorldWrightMainForm.WorldTreePopupMenuPopup(Sender: TObject);
+begin
+  { Go Here is meaningful only for actual room entities. Structural nodes and
+    objects may still be selected/inspected but are not navigation targets. }
+  GoHereMenuItem.Enabled :=
+    (WorldTree.Selected <> nil) and
+    (WorldTree.Selected.Data <> nil) and
+    (TWorldEntity(WorldTree.Selected.Data) is TWorldRoom);
 end;
 
 procedure TWorldWrightMainForm.WorldTreeDblClick(Sender: TObject);
