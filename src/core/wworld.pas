@@ -253,6 +253,28 @@ begin
       Exit(orsUnique);
     end;
 
+  { A distinguishing phrase is an exact alternate player reference, not fuzzy
+    adjective matching. Normal display-name matching remains the next fallback. }
+  MatchCount := 0;
+  for WorldObject in FObjects do
+    if (WorldObject.LocationKind = olRoom) and
+      (WorldObject.Room = ARoom) and
+      (Trim(WorldObject.DistinguishingText) <> '') and
+      SameText(WorldObject.DistinguishingText + ' ' + WorldObject.Name,
+        ReferenceText) then
+    begin
+      Inc(MatchCount);
+      if MatchCount = 1 then
+        AObject := WorldObject;
+    end;
+  if MatchCount = 1 then
+    Exit(orsUnique)
+  else if MatchCount > 1 then
+  begin
+    AObject := nil;
+    Exit(orsAmbiguous);
+  end;
+
   MatchCount := 0;
   for WorldObject in FObjects do
     if (WorldObject.LocationKind = olRoom) and
@@ -291,6 +313,27 @@ begin
       AObject := WorldObject;
       Exit(orsUnique);
     end;
+
+  { A distinguishing phrase is an exact alternate player reference, not fuzzy
+    adjective matching. Normal display-name matching remains the next fallback. }
+  MatchCount := 0;
+  for WorldObject in FObjects do
+    if (WorldObject.LocationKind = olPlayerInventory) and
+      (Trim(WorldObject.DistinguishingText) <> '') and
+      SameText(WorldObject.DistinguishingText + ' ' + WorldObject.Name,
+        ReferenceText) then
+    begin
+      Inc(MatchCount);
+      if MatchCount = 1 then
+        AObject := WorldObject;
+    end;
+  if MatchCount = 1 then
+    Exit(orsUnique)
+  else if MatchCount > 1 then
+  begin
+    AObject := nil;
+    Exit(orsAmbiguous);
+  end;
 
   MatchCount := 0;
   for WorldObject in FObjects do
@@ -336,6 +379,28 @@ begin
       AObject := WorldObject;
       Exit(orsUnique);
     end;
+  end;
+
+  { A distinguishing phrase is an exact alternate player reference, not fuzzy
+    adjective matching. Normal display-name matching remains the next fallback. }
+  MatchCount := 0;
+  for WorldObject in FObjects do
+    if (((WorldObject.LocationKind = olPlayerInventory) or
+       ((WorldObject.LocationKind = olRoom) and (WorldObject.Room = ARoom)))) and
+      (Trim(WorldObject.DistinguishingText) <> '') and
+      SameText(WorldObject.DistinguishingText + ' ' + WorldObject.Name,
+        ReferenceText) then
+    begin
+      Inc(MatchCount);
+      if MatchCount = 1 then
+        AObject := WorldObject;
+    end;
+  if MatchCount = 1 then
+    Exit(orsUnique)
+  else if MatchCount > 1 then
+  begin
+    AObject := nil;
+    Exit(orsAmbiguous);
   end;
 
   MatchCount := 0;
