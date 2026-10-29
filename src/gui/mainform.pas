@@ -29,6 +29,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure WorldTreeSelectionChanged(Sender: TObject);
   private
     FWorld: TWorld;
     FSession: TGameSession;
@@ -38,6 +39,7 @@ type
     procedure ExecuteInputLine(const ACommand: string);
     procedure ProcessPastedLines;
     procedure RefreshWorldView;
+    procedure RefreshInspector;
     procedure SubmitCommand;
   end;
 
@@ -110,36 +112,95 @@ begin
   for Room in FWorld.Rooms do
   begin
     RoomNode := WorldTree.Items.AddChild(WorldNode, Room.Name);
+    RoomNode.Data := Room;
     for WorldObject in FWorld.Objects do
       if (WorldObject.LocationKind = olRoom) and
         (WorldObject.Room = Room) then
-        WorldTree.Items.AddChild(RoomNode, WorldObject.Name);
+        with WorldTree.Items.AddChild(RoomNode, WorldObject.Name) do
+          Data := WorldObject;
     RoomNode.Expand(True);
   end;
 
   InventoryNode := WorldTree.Items.AddChild(WorldNode, 'Inventory');
   for WorldObject in FWorld.Objects do
     if WorldObject.LocationKind = olPlayerInventory then
-      WorldTree.Items.AddChild(InventoryNode, WorldObject.Name);
+      with WorldTree.Items.AddChild(InventoryNode, WorldObject.Name) do
+        Data := WorldObject;
   InventoryNode.Expand(True);
 
   WorldNode.Expand(True);
 
-  InspectorGrid.RowCount := 5;
+  { Rebuilding invalidates TTreeNode instances, so selection is intentionally
+    not treated as durable model state. With no explicit selection, the
+    inspector continues to describe the current room. }
+  RefreshInspector;
+end;
+
+procedure TWorldWrightMainForm.RefreshInspector;
+var
+  SelectedEntity: TWorldEntity;
+  SelectedObject: TWorldObject;
+  SelectedRoom: TWorldRoom;
+  LocationText: string;
+begin
+  InspectorGrid.Clean;
   InspectorGrid.Cells[0, 0] := 'Property';
   InspectorGrid.Cells[1, 0] := 'Value';
 
-  if FSession.CurrentRoom <> nil then
+  SelectedEntity := nil;
+  if (WorldTree.Selected <> nil) and (WorldTree.Selected.Data <> nil) then
+    SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
+
+  if SelectedEntity is TWorldObject then
+  begin
+    SelectedObject := TWorldObject(SelectedEntity);
+    InspectorGrid.RowCount := 6;
+    InspectorGrid.Cells[0, 1] := 'Name';
+    InspectorGrid.Cells[1, 1] := SelectedObject.Name;
+    InspectorGrid.Cells[0, 2] := 'ID';
+    InspectorGrid.Cells[1, 2] := SelectedObject.ID;
+    InspectorGrid.Cells[0, 3] := 'Kind';
+    InspectorGrid.Cells[1, 3] := 'Object';
+    InspectorGrid.Cells[0, 4] := 'Tag';
+    InspectorGrid.Cells[1, 4] := SelectedObject.Tag;
+    InspectorGrid.Cells[0, 5] := 'Description';
+    InspectorGrid.Cells[1, 5] := SelectedObject.Description;
+    if SelectedObject.LocationKind = olPlayerInventory then
+      LocationText := 'Inventory'
+    else if SelectedObject.Room <> nil then
+      LocationText := SelectedObject.Room.Name
+    else
+      LocationText := '';
+    InspectorGrid.RowCount := 7;
+    InspectorGrid.Cells[0, 6] := 'Location';
+    InspectorGrid.Cells[1, 6] := LocationText;
+    Exit;
+  end;
+
+  if SelectedEntity is TWorldRoom then
+    SelectedRoom := TWorldRoom(SelectedEntity)
+  else
+    SelectedRoom := FSession.CurrentRoom;
+
+  InspectorGrid.RowCount := 5;
+  if SelectedRoom <> nil then
   begin
     InspectorGrid.Cells[0, 1] := 'Name';
-    InspectorGrid.Cells[1, 1] := FSession.CurrentRoom.Name;
+    InspectorGrid.Cells[1, 1] := SelectedRoom.Name;
     InspectorGrid.Cells[0, 2] := 'ID';
-    InspectorGrid.Cells[1, 2] := FSession.CurrentRoom.ID;
+    InspectorGrid.Cells[1, 2] := SelectedRoom.ID;
     InspectorGrid.Cells[0, 3] := 'Kind';
     InspectorGrid.Cells[1, 3] := 'Room';
     InspectorGrid.Cells[0, 4] := 'Description';
-    InspectorGrid.Cells[1, 4] := FSession.CurrentRoom.Description;
+    InspectorGrid.Cells[1, 4] := SelectedRoom.Description;
   end;
+end;
+
+procedure TWorldWrightMainForm.WorldTreeSelectionChanged(Sender: TObject);
+begin
+  { Tree node Data is a non-owning pointer into FWorld. Nodes are rebuilt after
+    each command, so no node outlives the model entity it currently displays. }
+  RefreshInspector;
 end;
 
 { Route @ commands to authoring and ordinary text to play. Both sessions share
