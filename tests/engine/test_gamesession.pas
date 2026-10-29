@@ -68,6 +68,17 @@ begin
 
       with World.AddObject('brass_key_2', 'brass key', Laboratory) do
         DistinguishingText := 'shiny';
+      Output := Session.ExecuteCommand('examine shiny brass key');
+      Check(Pos('nothing special', Output) > 0,
+        'EXAMINE did not resolve distinguishing text directly');
+
+      Output := Session.ExecuteCommand('take shiny brass key');
+      Check(Pos('Taken', Output) > 0,
+        'TAKE did not resolve distinguishing text directly');
+      Output := Session.ExecuteCommand('drop shiny brass key');
+      Check(Pos('Dropped', Output) > 0,
+        'DROP did not resolve distinguishing text in inventory');
+
       Output := Session.ExecuteCommand('examine brass key');
       Check((Pos('Which', Output) > 0) and (Pos('1.', Output) > 0) and
         (Pos('2.', Output) > 0) and (Pos('tarnished brass key', Output) > 0) and
