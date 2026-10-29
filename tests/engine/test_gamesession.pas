@@ -50,6 +50,9 @@ begin
       Check(Pos('Taken', Output) > 0, 'TAKE did not report success');
       Check(Pos('brass key', Session.ExecuteCommand('inventory')) > 0,
         'INVENTORY did not show the carried object');
+      Check(Pos('tarnished brass key',
+        Session.ExecuteCommand('examine brass key')) > 0,
+        'EXAMINE could not inspect a carried object');
       Check(Pos('brass key', Session.ExecuteCommand('look')) = 0,
         'TAKE left the object visible in the room');
 
