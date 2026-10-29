@@ -1,5 +1,11 @@
 unit WGameSession;
 
+{ Runtime player session.
+
+  TGameSession owns transient play state but never owns TWorld or its entities.
+  It receives semantic parser results, resolves them against the live model,
+  and applies player-visible effects such as movement and examination. }
+
 {$mode objfpc}{$H+}
 
 interface
@@ -19,6 +25,8 @@ type
   public
     constructor Create(AWorld: TWorld);
     function ExecuteCommand(const ACommand: string): string;
+    { CurrentRoom is intentionally writable so builder operations can move the
+      shared live session without duplicating player-location state. }
     property CurrentRoom: TWorldRoom read FCurrentRoom write FCurrentRoom;
   end;
 
@@ -46,6 +54,8 @@ begin
   if Trim(FCurrentRoom.Description) <> '' then
     Result := Result + LineEnding + FCurrentRoom.Description;
 
+  { Room contents are derived from the world's object collection rather than
+    cached on the room, keeping one authoritative location reference. }
   ObjectsText := '';
   for WorldObject in FWorld.Objects do
     if WorldObject.Room = FCurrentRoom then
