@@ -26,6 +26,8 @@ type
     function EntityIDExists(const AID: string): Boolean;
     function CreateRoom(const AName: string): string;
     function CreateObject(const AName: string): string;
+    function DescribeObject(const AArguments: string): string;
+    function FindObjectInCurrentRoom(const ANameOrID: string): TWorldObject;
     function DescribeRoom(const ADescription: string): string;
     function RenameRoom(const AName: string): string;
     function MoveToRoom(const ARoom: string): string;
@@ -131,6 +133,47 @@ begin
   FWorld.AddObject(ID, Name, FGameSession.CurrentRoom);
   Result := 'Created object "' + Name + '" [' + ID + '] in "' +
     FGameSession.CurrentRoom.Name + '".';
+end;
+
+function TBuilderSession.FindObjectInCurrentRoom(
+  const ANameOrID: string): TWorldObject;
+var
+  WorldObject: TWorldObject;
+begin
+  { Builder object lookup is intentionally scoped to the current room. This
+    avoids silently editing a same-named object elsewhere in the world. }
+  for WorldObject in FWorld.Objects do
+    if (WorldObject.Room = FGameSession.CurrentRoom) and
+      (SameText(WorldObject.ID, Trim(ANameOrID)) or
+       SameText(WorldObject.Name, Trim(ANameOrID))) then
+      Exit(WorldObject);
+  Result := nil;
+end;
+
+function TBuilderSession.DescribeObject(const AArguments: string): string;
+var
+  ObjectRef, Description: string;
+  SpacePos: SizeInt;
+  WorldObject: TWorldObject;
+begin
+  if FGameSession.CurrentRoom = nil then
+    Exit('There is no current room containing the object.');
+
+  SpacePos := Pos(' ', Trim(AArguments));
+  if SpacePos = 0 then
+    Exit('Usage: @DESCRIBEOBJECT <object> <description>');
+
+  ObjectRef := Copy(Trim(AArguments), 1, SpacePos - 1);
+  Description := Trim(Copy(Trim(AArguments), SpacePos + 1, MaxInt));
+  if Description = '' then
+    Exit('Usage: @DESCRIBEOBJECT <object> <description>');
+
+  WorldObject := FindObjectInCurrentRoom(ObjectRef);
+  if WorldObject = nil then
+    Exit('Object "' + ObjectRef + '" was not found in the current room.');
+
+  WorldObject.Description := Description;
+  Result := 'Description updated for object "' + WorldObject.Name + '".';
 end;
 
 function TBuilderSession.DescribeRoom(const ADescription: string): string;
@@ -302,6 +345,8 @@ begin
     Exit(CreateRoom(Argument));
   if SameText(Command, '@OBJECT') then
     Exit(CreateObject(Argument));
+  if SameText(Command, '@DESCRIBEOBJECT') then
+    Exit(DescribeObject(Argument));
   if SameText(Command, '@DESCRIBE') then
     Exit(DescribeRoom(Argument));
   if SameText(Command, '@RENAME') then
