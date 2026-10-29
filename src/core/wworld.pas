@@ -28,6 +28,10 @@ type
     arbitrary same-named object. Stable-ID matches are always exact. }
   TObjectResolveStatus = (orsNotFound, orsUnique, orsAmbiguous);
 
+  { Explicit location state avoids using Room=nil as a hidden synonym for
+    inventory. Future containment/NPC locations can extend this enum cleanly. }
+  TWorldObjectLocationKind = (olRoom, olPlayerInventory);
+
   { TWorldEntity is the common identity-bearing base for objects stored in a
     WorldWright project. Stable IDs are deliberately separate from display
     names so authors may rename things without breaking relationships. }
@@ -79,10 +83,14 @@ type
   private
     FDescription: string;
     FRoom: TWorldRoom;
+    FLocationKind: TWorldObjectLocationKind;
   public
     constructor Create(const AID, AName: string; ARoom: TWorldRoom);
+    procedure MoveToRoom(ARoom: TWorldRoom);
+    procedure MoveToPlayerInventory;
     property Description: string read FDescription write FDescription;
-    property Room: TWorldRoom read FRoom write FRoom;
+    property LocationKind: TWorldObjectLocationKind read FLocationKind;
+    property Room: TWorldRoom read FRoom;
   end;
 
   TWorldObjectList = specialize TObjectList<TWorldObject>;
@@ -99,6 +107,8 @@ type
     function AddRoom(const AID, AName: string): TWorldRoom;
     function AddObject(const AID, AName: string; ARoom: TWorldRoom): TWorldObject;
     function ResolveObjectInRoom(ARoom: TWorldRoom; const ANameOrID: string;
+      out AObject: TWorldObject): TObjectResolveStatus;
+    function ResolveObjectInInventory(const ANameOrID: string;
       out AObject: TWorldObject): TObjectResolveStatus;
     { DeleteRoom also removes objects located in ARoom and exits that target
       it, preserving pointer integrity before the room is freed. }
@@ -172,6 +182,21 @@ begin
   if ARoom = nil then
     raise EArgumentNilException.Create('ARoom');
   FRoom := ARoom;
+  FLocationKind := olRoom;
+end;
+
+procedure TWorldObject.MoveToRoom(ARoom: TWorldRoom);
+begin
+  if ARoom = nil then
+    raise EArgumentNilException.Create('ARoom');
+  FRoom := ARoom;
+  FLocationKind := olRoom;
+end;
+
+procedure TWorldObject.MoveToPlayerInventory;
+begin
+  FRoom := nil;
+  FLocationKind := olPlayerInventory;
 end;
 
 constructor TWorld.Create;
@@ -214,7 +239,8 @@ begin
   { Stable IDs are project-wide unique and therefore take precedence over
     display-name matching, even when duplicate names share a room. }
   for WorldObject in FObjects do
-    if (WorldObject.Room = ARoom) and SameText(WorldObject.ID, ReferenceText) then
+    if (WorldObject.LocationKind = olRoom) and
+      (WorldObject.Room = ARoom) and SameText(WorldObject.ID, ReferenceText) then
     begin
       AObject := WorldObject;
       Exit(orsUnique);
@@ -222,7 +248,47 @@ begin
 
   MatchCount := 0;
   for WorldObject in FObjects do
-    if (WorldObject.Room = ARoom) and SameText(WorldObject.Name, ReferenceText) then
+    if (WorldObject.LocationKind = olRoom) and
+      (WorldObject.Room = ARoom) and SameText(WorldObject.Name, ReferenceText) then
+    begin
+      Inc(MatchCount);
+      if MatchCount = 1 then
+        AObject := WorldObject;
+    end;
+
+  case MatchCount of
+    0: Result := orsNotFound;
+    1: Result := orsUnique;
+  else
+    begin
+      AObject := nil;
+      Result := orsAmbiguous;
+    end;
+  end;
+end;
+
+function TWorld.ResolveObjectInInventory(const ANameOrID: string;
+  out AObject: TWorldObject): TObjectResolveStatus;
+var
+  WorldObject: TWorldObject;
+  MatchCount: Integer;
+  ReferenceText: string;
+begin
+  AObject := nil;
+  ReferenceText := Trim(ANameOrID);
+
+  for WorldObject in FObjects do
+    if (WorldObject.LocationKind = olPlayerInventory) and
+      SameText(WorldObject.ID, ReferenceText) then
+    begin
+      AObject := WorldObject;
+      Exit(orsUnique);
+    end;
+
+  MatchCount := 0;
+  for WorldObject in FObjects do
+    if (WorldObject.LocationKind = olPlayerInventory) and
+      SameText(WorldObject.Name, ReferenceText) then
     begin
       Inc(MatchCount);
       if MatchCount = 1 then
@@ -251,7 +317,8 @@ begin
   { Objects in a deleted room cannot retain a dangling room reference. Stage 1
     deletes them with the room; later containment semantics may offer choices. }
   for I := FObjects.Count - 1 downto 0 do
-    if FObjects[I].Room = ARoom then
+    if (FObjects[I].LocationKind = olRoom) and
+      (FObjects[I].Room = ARoom) then
       FObjects.Delete(I);
 
   { Remove all exit references before the owning room list frees destination. }
