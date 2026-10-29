@@ -46,10 +46,28 @@ begin
       Check(Pos('tarnished brass key', Output) > 0,
         'EXAMINE did not return the object description');
 
+      Output := Session.ExecuteCommand('take brass key');
+      Check(Pos('Taken', Output) > 0, 'TAKE did not report success');
+      Check(Pos('brass key', Session.ExecuteCommand('inventory')) > 0,
+        'INVENTORY did not show the carried object');
+      Check(Pos('brass key', Session.ExecuteCommand('look')) = 0,
+        'TAKE left the object visible in the room');
+
+      Output := Session.ExecuteCommand('drop brass key');
+      Check(Pos('Dropped', Output) > 0, 'DROP did not report success');
+      Check(Pos('carrying nothing', Session.ExecuteCommand('i')) > 0,
+        'DROP left the object in inventory');
+      Check(Pos('brass key', Session.ExecuteCommand('look')) > 0,
+        'DROP did not return the object to the current room');
+
       World.AddObject('brass_key_2', 'brass key', Laboratory);
       Output := Session.ExecuteCommand('examine brass key');
       Check(Pos('Which', Output) > 0,
         'EXAMINE did not ask for clarification on duplicate names');
+
+      Output := Session.ExecuteCommand('take brass key');
+      Check(Pos('Which', Output) > 0,
+        'TAKE did not report duplicate-name ambiguity');
 
       Output := Session.ExecuteCommand('x missing thing');
       Check(Pos('do not see', Output) > 0,
