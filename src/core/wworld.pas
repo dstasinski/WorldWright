@@ -65,6 +65,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function AddRoom(const AID, AName: string): TWorldRoom;
+    procedure DeleteRoom(ARoom: TWorldRoom);
     property Rooms: TWorldRoomList read FRooms;
   end;
 
@@ -143,6 +144,24 @@ function TWorld.AddRoom(const AID, AName: string): TWorldRoom;
 begin
   Result := TWorldRoom.Create(AID, AName);
   FRooms.Add(Result);
+end;
+
+procedure TWorld.DeleteRoom(ARoom: TWorldRoom);
+var
+  Room: TWorldRoom;
+  I: Integer;
+begin
+  if ARoom = nil then
+    raise EArgumentNilException.Create('ARoom');
+
+  { Remove all references before the owning room list frees the destination. }
+  for Room in FRooms do
+    if Room <> ARoom then
+      for I := Room.Exits.Count - 1 downto 0 do
+        if Room.Exits[I].Destination = ARoom then
+          Room.Exits.Delete(I);
+
+  FRooms.Remove(ARoom);
 end;
 
 end.
