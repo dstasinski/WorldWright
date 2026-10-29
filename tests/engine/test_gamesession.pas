@@ -46,6 +46,11 @@ begin
       Check(Pos('tarnished brass key', Output) > 0,
         'EXAMINE did not return the object description');
 
+      World.AddObject('brass_key_2', 'brass key', Laboratory);
+      Output := Session.ExecuteCommand('examine brass key');
+      Check(Pos('Which', Output) > 0,
+        'EXAMINE did not ask for clarification on duplicate names');
+
       Output := Session.ExecuteCommand('x missing thing');
       Check(Pos('do not see', Output) > 0,
         'EXAMINE did not report an object absent from the room');
