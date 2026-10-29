@@ -19,14 +19,23 @@ type
   private
     FWorld: TWorld;
     FCurrentRoom: TWorldRoom;
+    FPendingKind: TPlayerCommandKind;
+    FPendingObjects: TWorldObjectList;
     function DescribeCurrentRoom: string;
     function Move(ADirection: TWorldDirection): string;
     function Examine(const ANounPhrase: string): string;
     function Take(const ANounPhrase: string): string;
     function Drop(const ANounPhrase: string): string;
     function DescribeInventory: string;
+    function BeginDisambiguation(AKind: TPlayerCommandKind;
+      const AName: string): string;
+    function ExecutePendingChoice(const AInput: string): string;
+    function ApplyObjectCommand(AKind: TPlayerCommandKind;
+      AObject: TWorldObject): string;
+    procedure ClearPendingChoice;
   public
     constructor Create(AWorld: TWorld);
+    destructor Destroy; override;
     function ExecuteCommand(const ACommand: string): string;
     { CurrentRoom is intentionally writable so builder operations can move the
       shared live session without duplicating player-location state. }
@@ -43,6 +52,20 @@ begin
   FWorld := AWorld;
   if FWorld.Rooms.Count > 0 then
     FCurrentRoom := FWorld.Rooms[0];
+  FPendingObjects := TWorldObjectList.Create(False);
+  FPendingKind := pcUnknown;
+end;
+
+destructor TGameSession.Destroy;
+begin
+  FPendingObjects.Free;
+  inherited Destroy;
+end;
+
+procedure TGameSession.ClearPendingChoice;
+begin
+  FPendingObjects.Clear;
+  FPendingKind := pcUnknown;
 end;
 
 function TGameSession.DescribeCurrentRoom: string;
@@ -87,6 +110,99 @@ begin
   Result := DescribeCurrentRoom;
 end;
 
+function TGameSession.ApplyObjectCommand(AKind: TPlayerCommandKind;
+  AObject: TWorldObject): string;
+begin
+  case AKind of
+    pcExamine:
+      begin
+        if Trim(AObject.Description) <> '' then
+          Result := AObject.Description
+        else
+          Result := 'You see nothing special about the ' + AObject.Name + '.';
+      end;
+    pcTake:
+      begin
+        AObject.MoveToPlayerInventory;
+        Result := 'Taken.';
+      end;
+    pcDrop:
+      begin
+        if FCurrentRoom = nil then
+          Result := 'You are nowhere, so there is nowhere to drop it.'
+        else
+        begin
+          AObject.MoveToRoom(FCurrentRoom);
+          Result := 'Dropped.';
+        end;
+      end;
+  else
+    Result := '';
+  end;
+end;
+
+function TGameSession.BeginDisambiguation(AKind: TPlayerCommandKind;
+  const AName: string): string;
+var
+  WorldObject: TWorldObject;
+  I: Integer;
+  IsCandidate: Boolean;
+  LocationText: string;
+begin
+  ClearPendingChoice;
+  FPendingKind := AKind;
+
+  for WorldObject in FWorld.Objects do
+  begin
+    case AKind of
+      pcExamine:
+        IsCandidate := SameText(WorldObject.Name, Trim(AName)) and
+          ((WorldObject.LocationKind = olPlayerInventory) or
+           ((WorldObject.LocationKind = olRoom) and
+            (WorldObject.Room = FCurrentRoom)));
+      pcTake:
+        IsCandidate := SameText(WorldObject.Name, Trim(AName)) and
+          (WorldObject.LocationKind = olRoom) and
+          (WorldObject.Room = FCurrentRoom);
+      pcDrop:
+        IsCandidate := SameText(WorldObject.Name, Trim(AName)) and
+          (WorldObject.LocationKind = olPlayerInventory);
+    else
+      IsCandidate := False;
+    end;
+    if IsCandidate then
+      FPendingObjects.Add(WorldObject);
+  end;
+
+  Result := 'Which "' + Trim(AName) + '" do you mean?';
+  for I := 0 to FPendingObjects.Count - 1 do
+  begin
+    if FPendingObjects[I].LocationKind = olPlayerInventory then
+      LocationText := 'carried'
+    else
+      LocationText := 'here';
+    Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
+      FPendingObjects[I].Name + ' (' + LocationText + ')';
+  end;
+  Result := Result + LineEnding + 'Enter a number, or another command to cancel.';
+end;
+
+function TGameSession.ExecutePendingChoice(const AInput: string): string;
+var
+  Choice, Code: Integer;
+  ChosenObject: TWorldObject;
+  PendingKind: TPlayerCommandKind;
+begin
+  Val(Trim(AInput), Choice, Code);
+  if (Code <> 0) or (Choice < 1) or (Choice > FPendingObjects.Count) then
+    Exit('');
+
+  ChosenObject := FPendingObjects[Choice - 1];
+  PendingKind := FPendingKind;
+  ClearPendingChoice;
+  Result := ApplyObjectCommand(PendingKind, ChosenObject);
+end;
+
 function TGameSession.Examine(const ANounPhrase: string): string;
 var
   WorldObject: TWorldObject;
@@ -96,7 +212,7 @@ begin
     WorldObject);
   case ResolveStatus of
     orsAmbiguous:
-      Exit('Which "' + Trim(ANounPhrase) + '" do you mean?');
+      Exit(BeginDisambiguation(pcExamine, ANounPhrase));
     orsNotFound:
       Exit('You do not see "' + Trim(ANounPhrase) + '" here.');
   end;
@@ -115,7 +231,7 @@ begin
     WorldObject);
   case ResolveStatus of
     orsAmbiguous:
-      Exit('Which "' + Trim(ANounPhrase) + '" do you mean?');
+      Exit(BeginDisambiguation(pcTake, ANounPhrase));
     orsNotFound:
       Exit('You do not see "' + Trim(ANounPhrase) + '" here.');
   end;
@@ -132,7 +248,7 @@ begin
   ResolveStatus := FWorld.ResolveObjectInInventory(ANounPhrase, WorldObject);
   case ResolveStatus of
     orsAmbiguous:
-      Exit('Which "' + Trim(ANounPhrase) + '" do you mean?');
+      Exit(BeginDisambiguation(pcDrop, ANounPhrase));
     orsNotFound:
       Exit('You are not carrying "' + Trim(ANounPhrase) + '".');
   end;
@@ -169,6 +285,15 @@ var
 begin
   if Trim(ACommand) = '' then
     Exit('');
+
+  if FPendingObjects.Count > 0 then
+  begin
+    Result := ExecutePendingChoice(ACommand);
+    if Result <> '' then
+      Exit;
+    { Any non-choice input is a new command and cancels the pending question. }
+    ClearPendingChoice;
+  end;
 
   Parsed := ParsePlayerCommand(ACommand);
   case Parsed.Kind of
