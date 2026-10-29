@@ -8,6 +8,7 @@ uses
 var
   World: TWorld;
   Laboratory, Hallway, ObservationDeck: TWorldRoom;
+  BrassKey: TWorldObject;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
 begin
@@ -23,10 +24,17 @@ begin
       'A dusty laboratory filled with abandoned equipment.';
     Hallway := World.AddRoom('hallway', 'Hallway');
 
+    BrassKey := World.AddObject('brass_key', 'brass key', Laboratory);
+    BrassKey.Description := 'A small, tarnished brass key.';
+
     Laboratory.Connect(wdNorth, Hallway);
     Hallway.Connect(wdSouth, Laboratory);
 
     Check(World.Rooms.Count = 2, 'rooms were not added');
+    Check(World.Objects.Count = 1, 'object was not added');
+    Check(BrassKey.ID = 'brass_key', 'stable object ID changed');
+    Check(BrassKey.Room = Laboratory, 'object room was not retained');
+    Check(BrassKey.Description <> '', 'object description was not retained');
     Check(Laboratory.ID = 'laboratory', 'stable room ID changed');
     Check(Laboratory.Name = 'Laboratory', 'room name was not retained');
     Check(Laboratory.Description <> '', 'room description was not retained');
