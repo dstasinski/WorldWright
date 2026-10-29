@@ -172,6 +172,31 @@ Example:
 @OBJECT brass key
 ```
 
+### @DISTINGUISH
+
+**Syntax:** `@DISTINGUISH <object> <text>`
+
+Sets short distinguishing text for an object that may share its display name
+with other objects. The object reference follows the same current-room rules as
+`@DESCRIBEOBJECT`; use the stable ID when duplicate names make the reference
+ambiguous.
+
+Example:
+
+```text
+@DISTINGUISH brass_key tarnished
+@DISTINGUISH brass_key_2 shiny
+```
+
+A later ambiguous player command can then present choices such as
+`tarnished brass key` and `shiny brass key`. If distinguishing text has not
+been authored, the prompt falls back to temporary numbered labels such as
+`brass key #1` and `brass key #2`.
+
+Distinguishing text is currently presentation metadata for disambiguation. It
+does not yet add parser vocabulary; for example, `TAKE tarnished brass key`
+will be added when adjective/vocabulary matching is implemented deliberately.
+
 ### @DESCRIBEOBJECT
 
 **Syntax:** `@DESCRIBEOBJECT <object> <description>`
@@ -198,8 +223,9 @@ WorldWright's object-command behavior follows this rule:
    in the command's applicable scope.
 3. Multiple matching names are ambiguous; commands must never silently choose
    the first match.
-4. For player object commands, WorldWright lists numbered matching candidates
-   and remembers the pending action. Entering a listed number applies the
+4. For player object commands, WorldWright lists numbered matching candidates.
+   Authored distinguishing text is shown when available; otherwise temporary
+   `name #N` labels are used. WorldWright remembers the pending action. Entering a listed number applies the
    original command to that exact object. Entering another command cancels the
    pending choice and executes the new command normally.
 5. Builder commands report ambiguity and allow the author to use the stable ID.
