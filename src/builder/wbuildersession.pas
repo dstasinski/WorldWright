@@ -1,5 +1,13 @@
 unit WBuilderSession;
 
+{ Live authoring command session.
+
+  Builder commands mutate the same neutral TWorld used by TGameSession. This
+  unit owns neither dependency. Stable entity IDs are generated here for
+  interactive authoring, while names remain freely editable display labels.
+  Builder helpers validate command-level preconditions; structural integrity
+  remains the responsibility of the core model. }
+
 {$mode objfpc}{$H+}
 
 interface
@@ -14,8 +22,8 @@ type
   private
     FWorld: TWorld;
     FGameSession: TGameSession;
-    function MakeRoomID(const AName: string): string;
-    function RoomIDExists(const AID: string): Boolean;
+    function MakeEntityID(const AName, ADefaultBase: string): string;
+    function EntityIDExists(const AID: string): Boolean;
     function CreateRoom(const AName: string): string;
     function CreateObject(const AName: string): string;
     function DescribeRoom(const ADescription: string): string;
@@ -44,22 +52,29 @@ begin
   FGameSession := AGameSession;
 end;
 
-function TBuilderSession.RoomIDExists(const AID: string): Boolean;
+function TBuilderSession.EntityIDExists(const AID: string): Boolean;
 var
   Room: TWorldRoom;
+  WorldObject: TWorldObject;
 begin
   for Room in FWorld.Rooms do
     if SameText(Room.ID, AID) then
       Exit(True);
+  for WorldObject in FWorld.Objects do
+    if SameText(WorldObject.ID, AID) then
+      Exit(True);
   Result := False;
 end;
 
-function TBuilderSession.MakeRoomID(const AName: string): string;
+function TBuilderSession.MakeEntityID(const AName, ADefaultBase: string): string;
 var
   I: Integer;
   Ch: Char;
   BaseID, Candidate, NormalizedName: string;
 begin
+  { IDs are lowercase ASCII slugs because they are persistence/interchange
+    identities, not presentation text. Suffixes make them unique across all
+    entity types currently present in the project. }
   BaseID := '';
   NormalizedName := LowerCase(Trim(AName));
   for I := 1 to Length(NormalizedName) do
@@ -75,11 +90,11 @@ begin
   while (BaseID <> '') and (BaseID[Length(BaseID)] = '_') do
     Delete(BaseID, Length(BaseID), 1);
   if BaseID = '' then
-    BaseID := 'room';
+    BaseID := ADefaultBase;
 
   Candidate := BaseID;
   I := 2;
-  while RoomIDExists(Candidate) do
+  while EntityIDExists(Candidate) do
   begin
     Candidate := BaseID + '_' + IntToStr(I);
     Inc(I);
@@ -96,7 +111,7 @@ begin
   if Name = '' then
     Exit('Usage: @ROOM <name>');
 
-  ID := MakeRoomID(Name);
+  ID := MakeEntityID(Name, 'room');
   Room := FWorld.AddRoom(ID, Name);
   FGameSession.CurrentRoom := Room;
   Result := 'Created room "' + Name + '" [' + ID + '].';
@@ -105,8 +120,6 @@ end;
 function TBuilderSession.CreateObject(const AName: string): string;
 var
   Name, ID: string;
-  WorldObject: TWorldObject;
-  Suffix: Integer;
 begin
   Name := Trim(AName);
   if Name = '' then
@@ -114,22 +127,7 @@ begin
   if FGameSession.CurrentRoom = nil then
     Exit('There is no current room for the object.');
 
-  ID := MakeRoomID(Name);
-  { MakeRoomID already avoids room IDs. Also avoid existing object IDs so all
-    newly authored entity identifiers remain unambiguous. }
-  Suffix := 2;
-  while True do
-  begin
-    WorldObject := nil;
-    for WorldObject in FWorld.Objects do
-      if SameText(WorldObject.ID, ID) then
-        Break;
-    if (WorldObject = nil) or not SameText(WorldObject.ID, ID) then
-      Break;
-    ID := MakeRoomID(Name) + '_' + IntToStr(Suffix);
-    Inc(Suffix);
-  end;
-
+  ID := MakeEntityID(Name, 'object');
   FWorld.AddObject(ID, Name, FGameSession.CurrentRoom);
   Result := 'Created object "' + Name + '" [' + ID + '] in "' +
     FGameSession.CurrentRoom.Name + '".';
