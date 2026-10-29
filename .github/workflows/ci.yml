@@ -25,14 +25,20 @@ jobs:
       - name: Run core smoke test
         run: ./build/test_world
 
+      - name: Build player-parser smoke test
+        run: fpc -B -Fu./src/core -Fu./src/parser -FU./build -FE./build tests/parser/test_parser.pas
+
+      - name: Run player-parser smoke test
+        run: ./build/test_parser
+
       - name: Build game-session smoke test
-        run: fpc -B -Fu./src/core -Fu./src/engine -FU./build -FE./build tests/engine/test_gamesession.pas
+        run: fpc -B -Fu./src/core -Fu./src/parser -Fu./src/engine -FU./build -FE./build tests/engine/test_gamesession.pas
 
       - name: Run game-session smoke test
         run: ./build/test_gamesession
 
       - name: Build builder-session smoke test
-        run: fpc -B -Fu./src/core -Fu./src/engine -Fu./src/builder -FU./build -FE./build tests/builder/test_buildersession.pas
+        run: fpc -B -Fu./src/core -Fu./src/parser -Fu./src/engine -Fu./src/builder -FU./build -FE./build tests/builder/test_buildersession.pas
 
       - name: Run builder-session smoke test
         run: ./build/test_buildersession
