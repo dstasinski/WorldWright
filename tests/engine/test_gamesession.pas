@@ -25,7 +25,8 @@ begin
       'A dusty laboratory filled with abandoned equipment.';
     Hallway := World.AddRoom('hallway', 'Hallway');
     Hallway.Description := 'A narrow hallway stretches north and south.';
-    World.AddObject('brass_key', 'brass key', Laboratory);
+    with World.AddObject('brass_key', 'brass key', Laboratory) do
+      Description := 'A small, tarnished brass key.';
     Laboratory.Connect(wdNorth, Hallway);
     Hallway.Connect(wdSouth, Laboratory);
 
@@ -40,6 +41,14 @@ begin
         'LOOK omitted room description');
       Check(Pos('brass key', Output) > 0,
         'LOOK omitted an object in the current room');
+
+      Output := Session.ExecuteCommand('examine brass key');
+      Check(Pos('tarnished brass key', Output) > 0,
+        'EXAMINE did not return the object description');
+
+      Output := Session.ExecuteCommand('x missing thing');
+      Check(Pos('do not see', Output) > 0,
+        'EXAMINE did not report an object absent from the room');
 
       Output := Session.ExecuteCommand('N');
       Check(Session.CurrentRoom = Hallway, 'N did not move north');
