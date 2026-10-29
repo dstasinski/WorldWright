@@ -181,8 +181,14 @@ begin
       LocationText := 'carried'
     else
       LocationText := 'here';
-    Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
-      FPendingObjects[I].Name + ' (' + LocationText + ')';
+    if Trim(FPendingObjects[I].DistinguishingText) <> '' then
+      Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
+        FPendingObjects[I].DistinguishingText + ' ' +
+        FPendingObjects[I].Name + ' (' + LocationText + ')'
+    else
+      Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
+        FPendingObjects[I].Name + ' #' + IntToStr(I + 1) +
+        ' (' + LocationText + ')';
   end;
   Result := Result + LineEnding + 'Enter a number, or another command to cancel.';
 end;
