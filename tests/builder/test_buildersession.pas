@@ -78,6 +78,13 @@ begin
         Builder.ExecuteCommand('@room Observation Deck');
         Check(World.Rooms[2].ID = 'observation_deck_2',
           'duplicate generated ID was not made unique');
+        Output := Builder.ExecuteCommand('@delete');
+        Check(World.Rooms.Count = 2,
+          '@DELETE did not remove the current room');
+        Check(Game.CurrentRoom <> nil,
+          '@DELETE left the game session without a current room');
+        Check(Pos('Deleted room', Output) > 0,
+          '@DELETE did not report success');
 
         Output := Builder.ExecuteCommand('@room');
         Check(Pos('Usage:', Output) > 0,
