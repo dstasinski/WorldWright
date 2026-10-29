@@ -91,6 +91,9 @@ begin
   Hallway.Connect(wdSouth, Laboratory);
 end;
 
+{ Rebuild the current bootstrap tree/inspector from the model after every
+  command. These controls are temporary UI surfaces; model state never lives
+  in the tree or grid. }
 procedure TWorldWrightMainForm.RefreshWorldView;
 var
   WorldNode: TTreeNode;
@@ -121,6 +124,9 @@ begin
   end;
 end;
 
+{ Route @ commands to authoring and ordinary text to play. Both sessions share
+  FWorld and FSession.CurrentRoom, so changes are immediately visible to the
+  other side before the GUI refreshes. }
 procedure TWorldWrightMainForm.ExecuteInputLine(const ACommand: string);
 var
   Command, Response: string;
@@ -161,6 +167,8 @@ begin
   WorkspaceMemo.SelStart := Length(WorkspaceMemo.Text);
 end;
 
+{ TMemo is used for input so a multiline paste can be treated as a command
+  batch. FProcessingInput suppresses OnChange recursion while clearing it. }
 procedure TWorldWrightMainForm.ProcessPastedLines;
 var
   Lines: TStringList;
