@@ -45,12 +45,13 @@ function TBuilderSession.MakeRoomID(const AName: string): string;
 var
   I: Integer;
   Ch: Char;
-  BaseID, Candidate: string;
+  BaseID, Candidate, NormalizedName: string;
 begin
   BaseID := '';
-  for I := 1 to Length(Trim(AName)) do
+  NormalizedName := LowerCase(Trim(AName));
+  for I := 1 to Length(NormalizedName) do
   begin
-    Ch := LowerCase(Trim(AName)[I])[1];
+    Ch := NormalizedName[I];
     if Ch in ['a'..'z', '0'..'9'] then
       BaseID := BaseID + Ch
     else if (Ch in [' ', '-', '_']) and
