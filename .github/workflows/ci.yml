@@ -25,6 +25,12 @@ jobs:
       - name: Run core smoke test
         run: ./build/test_world
 
+      - name: Build game-session smoke test
+        run: fpc -B -Fu./src/core -Fu./src/engine -FU./build -FE./build tests/engine/test_gamesession.pas
+
+      - name: Run game-session smoke test
+        run: ./build/test_gamesession
+
   linux-gui:
     name: Linux GUI compile
     runs-on: ubuntu-24.04
