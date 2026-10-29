@@ -42,6 +42,7 @@ type
     FProcessingInput: Boolean;
     procedure BuildStarterWorld;
     procedure ExecuteInputLine(const ACommand: string);
+    function ObjectTreeLabel(AObject: TWorldObject): string;
     procedure ProcessPastedLines;
     procedure RefreshWorldView;
     procedure RefreshInspector;
@@ -98,6 +99,17 @@ begin
   Hallway.Connect(wdSouth, Laboratory);
 end;
 
+{ Return the author-facing object label used by the World Tree. A Tag is a
+  parser-visible prefix qualifier, so showing the same phrase here makes
+  otherwise identical object names distinguishable without changing Name or ID. }
+function TWorldWrightMainForm.ObjectTreeLabel(AObject: TWorldObject): string;
+begin
+  if Trim(AObject.Tag) <> '' then
+    Result := Trim(AObject.Tag) + ' ' + AObject.Name
+  else
+    Result := AObject.Name;
+end;
+
 { Rebuild the current bootstrap tree/inspector from the model after every
   command. These controls are temporary UI surfaces; model state never lives
   in the tree or grid. }
@@ -136,7 +148,7 @@ begin
       if (WorldObject.LocationKind = olRoom) and
         (WorldObject.Room = Room) then
         begin
-          NewNode := WorldTree.Items.AddChild(RoomNode, WorldObject.Name);
+          NewNode := WorldTree.Items.AddChild(RoomNode, ObjectTreeLabel(WorldObject));
           NewNode.Data := WorldObject;
         end;
     RoomNode.Expand(True);
@@ -146,7 +158,7 @@ begin
   for WorldObject in FWorld.Objects do
     if WorldObject.LocationKind = olPlayerInventory then
       begin
-        NewNode := WorldTree.Items.AddChild(InventoryNode, WorldObject.Name);
+        NewNode := WorldTree.Items.AddChild(InventoryNode, ObjectTreeLabel(WorldObject));
         NewNode.Data := WorldObject;
       end;
   InventoryNode.Expand(True);
