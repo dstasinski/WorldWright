@@ -18,6 +18,7 @@ type
     function RoomIDExists(const AID: string): Boolean;
     function CreateRoom(const AName: string): string;
     function DescribeRoom(const ADescription: string): string;
+    function RenameRoom(const AName: string): string;
     function ConnectRoom(const AArguments: string): string;
     function FindRoom(const ANameOrID: string): TWorldRoom;
     function ParseDirection(const AText: string; out ADirection,
@@ -114,6 +115,22 @@ begin
 end;
 
 
+
+function TBuilderSession.RenameRoom(const AName: string): string;
+var
+  Name, OldName: string;
+begin
+  Name := Trim(AName);
+  if Name = '' then
+    Exit('Usage: @RENAME <name>');
+  if FGameSession.CurrentRoom = nil then
+    Exit('There is no current room to rename.');
+
+  OldName := FGameSession.CurrentRoom.Name;
+  FGameSession.CurrentRoom.Name := Name;
+  Result := 'Renamed room "' + OldName + '" to "' + Name + '".';
+end;
+
 function TBuilderSession.FindRoom(const ANameOrID: string): TWorldRoom;
 var
   Room: TWorldRoom;
@@ -209,6 +226,8 @@ begin
     Exit(CreateRoom(Argument));
   if SameText(Command, '@DESCRIBE') then
     Exit(DescribeRoom(Argument));
+  if SameText(Command, '@RENAME') then
+    Exit(RenameRoom(Argument));
   if SameText(Command, '@CONNECT') then
     Exit(ConnectRoom(Argument));
 
