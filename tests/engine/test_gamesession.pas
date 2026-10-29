@@ -91,6 +91,9 @@ begin
       Output := Session.ExecuteCommand('take brass key');
       Check(Pos('Which', Output) > 0,
         'TAKE did not report duplicate-name ambiguity');
+      { Pending choices are stored by stable ID, so unrelated world changes
+        between the prompt and answer must not invalidate the selection. }
+      World.AddObject('unrelated_coin', 'coin', Laboratory);
       Output := Session.ExecuteCommand('1');
       Check(Pos('Taken', Output) > 0,
         'numbered TAKE choice did not take the selected object');
