@@ -20,7 +20,7 @@ type
     FWorld: TWorld;
     FCurrentRoom: TWorldRoom;
     FPendingKind: TPlayerCommandKind;
-    FPendingObjects: TWorldObjectList;
+    FPendingObjectIDs: TStringList;
     function DescribeCurrentRoom: string;
     function Move(ADirection: TWorldDirection): string;
     function Examine(const ANounPhrase: string): string;
@@ -52,19 +52,21 @@ begin
   FWorld := AWorld;
   if FWorld.Rooms.Count > 0 then
     FCurrentRoom := FWorld.Rooms[0];
-  FPendingObjects := TWorldObjectList.Create(False);
+  { Pending choices retain stable IDs rather than world-owned object pointers.
+    Builder mutations can therefore never leave this transient state dangling. }
+  FPendingObjectIDs := TStringList.Create;
   FPendingKind := pcUnknown;
 end;
 
 destructor TGameSession.Destroy;
 begin
-  FPendingObjects.Free;
+  FPendingObjectIDs.Free;
   inherited Destroy;
 end;
 
 procedure TGameSession.ClearPendingChoice;
 begin
-  FPendingObjects.Clear;
+  FPendingObjectIDs.Clear;
   FPendingKind := pcUnknown;
 end;
 
@@ -171,23 +173,25 @@ begin
       IsCandidate := False;
     end;
     if IsCandidate then
-      FPendingObjects.Add(WorldObject);
+      FPendingObjectIDs.Add(WorldObject.ID);
   end;
 
   Result := 'Which "' + Trim(AName) + '" do you mean?';
-  for I := 0 to FPendingObjects.Count - 1 do
+  for I := 0 to FPendingObjectIDs.Count - 1 do
   begin
-    if FPendingObjects[I].LocationKind = olPlayerInventory then
+    WorldObject := FWorld.FindObjectByID(FPendingObjectIDs[I]);
+    if WorldObject = nil then
+      Continue;
+    if WorldObject.LocationKind = olPlayerInventory then
       LocationText := 'carried'
     else
       LocationText := 'here';
-    if Trim(FPendingObjects[I].Tag) <> '' then
+    if Trim(WorldObject.Tag) <> '' then
       Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
-        FPendingObjects[I].Tag + ' ' +
-        FPendingObjects[I].Name + ' (' + LocationText + ')'
+        WorldObject.Tag + ' ' + WorldObject.Name + ' (' + LocationText + ')'
     else
       Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
-        FPendingObjects[I].Name + ' #' + IntToStr(I + 1) +
+        WorldObject.Name + ' #' + IntToStr(I + 1) +
         ' (' + LocationText + ')';
   end;
   Result := Result + LineEnding + 'Enter a number, or another command to cancel.';
@@ -200,12 +204,16 @@ var
   PendingKind: TPlayerCommandKind;
 begin
   Val(Trim(AInput), Choice, Code);
-  if (Code <> 0) or (Choice < 1) or (Choice > FPendingObjects.Count) then
+  if (Code <> 0) or (Choice < 1) or (Choice > FPendingObjectIDs.Count) then
     Exit('');
 
-  ChosenObject := FPendingObjects[Choice - 1];
+  { Resolve the stable ID only when the player answers. The world may have
+    changed since the ambiguity prompt was displayed. }
+  ChosenObject := FWorld.FindObjectByID(FPendingObjectIDs[Choice - 1]);
   PendingKind := FPendingKind;
   ClearPendingChoice;
+  if ChosenObject = nil then
+    Exit('That choice is no longer available.');
   Result := ApplyObjectCommand(PendingKind, ChosenObject);
 end;
 
@@ -292,7 +300,7 @@ begin
   if Trim(ACommand) = '' then
     Exit('');
 
-  if FPendingObjects.Count > 0 then
+  if FPendingObjectIDs.Count > 0 then
   begin
     Result := ExecutePendingChoice(ACommand);
     if Result <> '' then
