@@ -70,8 +70,8 @@ begin
           Game.ExecuteCommand('EXAMINE brass key')) > 0,
           'EXAMINE did not see the builder-authored description');
 
-        Output := Builder.ExecuteCommand('@tag brass_key tarnished');
-        Check(World.Objects[0].Tag = 'tarnished',
+        Output := Builder.ExecuteCommand('@tag brass_key a little brass key');
+        Check(World.Objects[0].Tag = 'a little brass key',
           '@TAG did not update tag');
         Check(Pos('Tag updated', Output) > 0,
           '@TAG did not report success');
