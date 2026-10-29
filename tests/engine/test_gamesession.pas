@@ -28,7 +28,7 @@ begin
     with World.AddObject('brass_key', 'brass key', Laboratory) do
     begin
       Description := 'A small, tarnished brass key.';
-      DistinguishingText := 'tarnished';
+      Tag := 'tarnished';
     end;
     Laboratory.Connect(wdNorth, Hallway);
     Hallway.Connect(wdSouth, Laboratory);
@@ -67,17 +67,17 @@ begin
         'DROP did not return the object to the current room');
 
       with World.AddObject('brass_key_2', 'brass key', Laboratory) do
-        DistinguishingText := 'shiny';
+        Tag := 'shiny';
       Output := Session.ExecuteCommand('examine shiny brass key');
       Check(Pos('nothing special', Output) > 0,
-        'EXAMINE did not resolve distinguishing text directly');
+        'EXAMINE did not resolve tag directly');
 
       Output := Session.ExecuteCommand('take shiny brass key');
       Check(Pos('Taken', Output) > 0,
-        'TAKE did not resolve distinguishing text directly');
+        'TAKE did not resolve tag directly');
       Output := Session.ExecuteCommand('drop shiny brass key');
       Check(Pos('Dropped', Output) > 0,
-        'DROP did not resolve distinguishing text in inventory');
+        'DROP did not resolve tag in inventory');
 
       Output := Session.ExecuteCommand('examine brass key');
       Check((Pos('Which', Output) > 0) and (Pos('1.', Output) > 0) and
