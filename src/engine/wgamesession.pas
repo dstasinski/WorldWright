@@ -188,7 +188,7 @@ begin
       LocationText := 'here';
     if Trim(WorldObject.Tag) <> '' then
       Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
-        WorldObject.Tag + ' ' + WorldObject.Name + ' (' + LocationText + ')'
+        WorldObject.Tag + ' (' + LocationText + ')'
     else
       Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
         WorldObject.Name + ' #' + IntToStr(I + 1) +
