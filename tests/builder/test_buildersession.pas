@@ -46,6 +46,14 @@ begin
         Check(Pos('Tall windows', Game.ExecuteCommand('LOOK')) > 0,
           'player LOOK did not see builder description');
 
+        Output := Builder.ExecuteCommand('@rename City Observatory');
+        Check(World.Rooms[1].Name = 'City Observatory',
+          '@RENAME did not update the current room name');
+        Check(World.Rooms[1].ID = 'observation_deck',
+          '@RENAME changed the stable room ID');
+        Check(Pos('City Observatory', Game.ExecuteCommand('LOOK')) > 0,
+          'player LOOK did not see renamed room');
+
         Output := Builder.ExecuteCommand('@connect south Laboratory');
         Check(World.Rooms[1].ExitTo(wdSouth) = World.Rooms[0],
           '@CONNECT did not create the requested exit');
@@ -73,6 +81,10 @@ begin
         Output := Builder.ExecuteCommand('@connect');
         Check(Pos('Usage:', Output) > 0,
           '@CONNECT without arguments did not report usage');
+
+        Output := Builder.ExecuteCommand('@rename');
+        Check(Pos('Usage:', Output) > 0,
+          '@RENAME without a name did not report usage');
 
         WriteLn('PASS: WorldWright builder-session smoke test');
       finally
