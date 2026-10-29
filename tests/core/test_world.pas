@@ -7,7 +7,7 @@ uses
 
 var
   World: TWorld;
-  Laboratory, Hallway: TWorldRoom;
+  Laboratory, Hallway, ObservationDeck: TWorldRoom;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
 begin
@@ -36,6 +36,15 @@ begin
       'south exit did not point to laboratory');
     Check(Laboratory.ExitTo(wdEast) = nil,
       'missing exit unexpectedly had a destination');
+
+    { Replacing an existing direction must safely dispose the old owned exit
+      and leave exactly one exit for that direction. }
+    ObservationDeck := World.AddRoom('observation_deck', 'Observation Deck');
+    Laboratory.Connect(wdNorth, ObservationDeck);
+    Check(Laboratory.ExitTo(wdNorth) = ObservationDeck,
+      'replacement north exit did not point to observation deck');
+    Check(Laboratory.Exits.Count = 1,
+      'replacing an exit left a duplicate direction');
 
     WriteLn('PASS: WorldWright core world-model smoke test');
   finally
