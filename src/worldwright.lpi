@@ -20,7 +20,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="2">
+    <Units Count="3">
       <Unit0>
         <Filename Value="worldwright.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -33,6 +33,11 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="MainForm"/>
       </Unit1>
+      <Unit2>
+        <Filename Value="engine/wgamesession.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="WGameSession"/>
+      </Unit2>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -40,7 +45,7 @@
     <PathDelim Value="\\"/>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="gui;core"/>
+      <OtherUnitFiles Value="gui;core;engine"/>
       <UnitOutputDirectory Value="../build"/>
     </SearchPaths>
     <Linking>
