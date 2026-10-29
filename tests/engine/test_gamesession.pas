@@ -28,7 +28,7 @@ begin
     with World.AddObject('brass_key', 'brass key', Laboratory) do
     begin
       Description := 'A small, tarnished brass key.';
-      Tag := 'tarnished';
+      Tag := 'a tarnished brass key';
     end;
     Laboratory.Connect(wdNorth, Hallway);
     Hallway.Connect(wdSouth, Laboratory);
@@ -46,7 +46,7 @@ begin
         'LOOK omitted an object in the current room');
 
       Output := Session.ExecuteCommand('examine brass key');
-      Check(Pos('tarnished brass key', Output) > 0,
+      Check(Pos('a tarnished brass key', Output) > 0,
         'EXAMINE did not return the object description');
 
       Output := Session.ExecuteCommand('take brass key');
@@ -67,22 +67,22 @@ begin
         'DROP did not return the object to the current room');
 
       with World.AddObject('brass_key_2', 'brass key', Laboratory) do
-        Tag := 'shiny';
-      Output := Session.ExecuteCommand('examine shiny brass key');
+        Tag := 'a shiny brass key';
+      Output := Session.ExecuteCommand('examine a shiny brass key');
       Check(Pos('nothing special', Output) > 0,
         'EXAMINE did not resolve tag directly');
 
-      Output := Session.ExecuteCommand('take shiny brass key');
+      Output := Session.ExecuteCommand('take a shiny brass key');
       Check(Pos('Taken', Output) > 0,
         'TAKE did not resolve tag directly');
-      Output := Session.ExecuteCommand('drop shiny brass key');
+      Output := Session.ExecuteCommand('drop a shiny brass key');
       Check(Pos('Dropped', Output) > 0,
         'DROP did not resolve tag in inventory');
 
       Output := Session.ExecuteCommand('examine brass key');
       Check((Pos('Which', Output) > 0) and (Pos('1.', Output) > 0) and
-        (Pos('2.', Output) > 0) and (Pos('tarnished brass key', Output) > 0) and
-        (Pos('shiny brass key', Output) > 0),
+        (Pos('2.', Output) > 0) and (Pos('a tarnished brass key', Output) > 0) and
+        (Pos('a shiny brass key', Output) > 0),
         'EXAMINE did not offer numbered duplicate-name choices');
       Output := Session.ExecuteCommand('2');
       Check(Pos('nothing special', Output) > 0,
