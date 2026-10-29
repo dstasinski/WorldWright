@@ -5,30 +5,35 @@ unit WBuilderSession;
 interface
 
 uses
-  Classes, SysUtils, WWorld;
+  Classes, SysUtils, WWorld, WGameSession;
 
 type
   { TBuilderSession interprets authoring commands against the same live neutral
-    model used by play mode. It does not own the world. }
+    model and current play session. It owns neither object. }
   TBuilderSession = class
   private
     FWorld: TWorld;
+    FGameSession: TGameSession;
     function MakeRoomID(const AName: string): string;
     function RoomIDExists(const AID: string): Boolean;
     function CreateRoom(const AName: string): string;
+    function DescribeRoom(const ADescription: string): string;
   public
-    constructor Create(AWorld: TWorld);
+    constructor Create(AWorld: TWorld; AGameSession: TGameSession);
     function ExecuteCommand(const ACommand: string): string;
   end;
 
 implementation
 
-constructor TBuilderSession.Create(AWorld: TWorld);
+constructor TBuilderSession.Create(AWorld: TWorld; AGameSession: TGameSession);
 begin
   inherited Create;
   if AWorld = nil then
     raise EArgumentNilException.Create('AWorld');
+  if AGameSession = nil then
+    raise EArgumentNilException.Create('AGameSession');
   FWorld := AWorld;
+  FGameSession := AGameSession;
 end;
 
 function TBuilderSession.RoomIDExists(const AID: string): Boolean;
@@ -77,14 +82,31 @@ end;
 function TBuilderSession.CreateRoom(const AName: string): string;
 var
   Name, ID: string;
+  Room: TWorldRoom;
 begin
   Name := Trim(AName);
   if Name = '' then
     Exit('Usage: @ROOM <name>');
 
   ID := MakeRoomID(Name);
-  FWorld.AddRoom(ID, Name);
+  Room := FWorld.AddRoom(ID, Name);
+  FGameSession.CurrentRoom := Room;
   Result := 'Created room "' + Name + '" [' + ID + '].';
+end;
+
+function TBuilderSession.DescribeRoom(const ADescription: string): string;
+var
+  Description: string;
+begin
+  Description := Trim(ADescription);
+  if Description = '' then
+    Exit('Usage: @DESCRIBE <description>');
+  if FGameSession.CurrentRoom = nil then
+    Exit('There is no current room to describe.');
+
+  FGameSession.CurrentRoom.Description := Description;
+  Result := 'Description updated for "' +
+    FGameSession.CurrentRoom.Name + '".';
 end;
 
 function TBuilderSession.ExecuteCommand(const ACommand: string): string;
@@ -107,6 +129,8 @@ begin
 
   if SameText(Command, '@ROOM') then
     Exit(CreateRoom(Argument));
+  if SameText(Command, '@DESCRIBE') then
+    Exit(DescribeRoom(Argument));
 
   Result := 'Unknown builder command "' + Command + '".';
 end;
