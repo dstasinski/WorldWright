@@ -104,13 +104,14 @@ end;
 procedure TWorldRoom.Connect(ADirection: TWorldDirection;
   ADestination: TWorldRoom);
 var
-  RoomExit: TWorldExit;
+  I: Integer;
 begin
-  for RoomExit in FExits do
-    if RoomExit.Direction = ADirection then
+  { FExits owns its TWorldExit instances, so Delete both removes and frees the
+    existing exit. Do not free the item a second time. }
+  for I := FExits.Count - 1 downto 0 do
+    if FExits[I].Direction = ADirection then
     begin
-      FExits.Remove(RoomExit);
-      RoomExit.Free;
+      FExits.Delete(I);
       Break;
     end;
   FExits.Add(TWorldExit.Create(ADirection, ADestination));
