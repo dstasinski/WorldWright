@@ -8,14 +8,13 @@ uses
   Classes, SysUtils, WWorld;
 
 type
-  { TGameSession owns transient play state for a live world. It does not own
-    the world itself. Keeping play state separate allows the same neutral
-    model to be edited by builder tools without coupling it to the GUI. }
+  { TGameSession owns transient play state for a live world. }
   TGameSession = class
   private
     FWorld: TWorld;
     FCurrentRoom: TWorldRoom;
     function DescribeCurrentRoom: string;
+    function Move(ADirection: TWorldDirection): string;
   public
     constructor Create(AWorld: TWorld);
     function ExecuteCommand(const ACommand: string): string;
@@ -44,6 +43,21 @@ begin
     Result := Result + LineEnding + FCurrentRoom.Description;
 end;
 
+function TGameSession.Move(ADirection: TWorldDirection): string;
+var
+  Destination: TWorldRoom;
+begin
+  if FCurrentRoom = nil then
+    Exit('You are nowhere.');
+
+  Destination := FCurrentRoom.ExitTo(ADirection);
+  if Destination = nil then
+    Exit('You cannot go that way.');
+
+  FCurrentRoom := Destination;
+  Result := DescribeCurrentRoom;
+end;
+
 function TGameSession.ExecuteCommand(const ACommand: string): string;
 var
   Command: string;
@@ -55,6 +69,14 @@ begin
 
   if (Command = 'LOOK') or (Command = 'L') then
     Exit(DescribeCurrentRoom);
+  if (Command = 'NORTH') or (Command = 'N') then
+    Exit(Move(wdNorth));
+  if (Command = 'SOUTH') or (Command = 'S') then
+    Exit(Move(wdSouth));
+  if (Command = 'EAST') or (Command = 'E') then
+    Exit(Move(wdEast));
+  if (Command = 'WEST') or (Command = 'W') then
+    Exit(Move(wdWest));
 
   Result := 'I do not understand "' + Trim(ACommand) + '".';
 end;
