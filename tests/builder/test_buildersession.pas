@@ -61,6 +61,15 @@ begin
         Check(Pos('brass key', Game.ExecuteCommand('LOOK')) > 0,
           'LOOK did not show the builder-created object');
 
+        Output := Builder.ExecuteCommand(
+          '@describeobject brass_key A small tarnished brass key.');
+        Check(World.Objects[0].Description =
+          'A small tarnished brass key.',
+          '@DESCRIBEOBJECT did not update the object description');
+        Check(Pos('tarnished brass key',
+          Game.ExecuteCommand('EXAMINE brass key')) > 0,
+          'EXAMINE did not see the builder-authored description');
+
         Output := Builder.ExecuteCommand('@move Laboratory');
         Check(Game.CurrentRoom = World.Rooms[0],
           '@MOVE did not change the current room');
@@ -100,6 +109,10 @@ begin
         Output := Builder.ExecuteCommand('@object');
         Check(Pos('Usage:', Output) > 0,
           '@OBJECT without a name did not report usage');
+
+        Output := Builder.ExecuteCommand('@describeobject');
+        Check(Pos('Usage:', Output) > 0,
+          '@DESCRIBEOBJECT without arguments did not report usage');
 
         Output := Builder.ExecuteCommand('@describe');
         Check(Pos('Usage:', Output) > 0,
