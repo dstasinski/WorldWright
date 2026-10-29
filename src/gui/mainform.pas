@@ -96,14 +96,25 @@ end;
   in the tree or grid. }
 procedure TWorldWrightMainForm.RefreshWorldView;
 var
-  WorldNode: TTreeNode;
+  WorldNode, RoomNode: TTreeNode;
   Room: TWorldRoom;
+  WorldObject: TWorldObject;
 begin
   WorldTree.Items.Clear;
   WorldNode := WorldTree.Items.Add(nil, 'World');
 
+  { The tree is a projection of persistent world structure. Room-located
+    objects belong beneath their room; player inventory is transient session
+    state and is deliberately not represented as part of this hierarchy. }
   for Room in FWorld.Rooms do
-    WorldTree.Items.AddChild(WorldNode, Room.Name);
+  begin
+    RoomNode := WorldTree.Items.AddChild(WorldNode, Room.Name);
+    for WorldObject in FWorld.Objects do
+      if (WorldObject.LocationKind = olRoom) and
+        (WorldObject.Room = Room) then
+        WorldTree.Items.AddChild(RoomNode, WorldObject.Name);
+    RoomNode.Expand(True);
+  end;
 
   WorldNode.Expand(True);
 
