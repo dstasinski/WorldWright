@@ -14,7 +14,8 @@ type
     the live model and game session; parser/engine behavior belongs outside
     the form. }
   TWorldWrightMainForm = class(TForm)
-    CommandEdit: TEdit;
+    CenterPanel: TPanel;
+    CommandMemo: TMemo;
     CommandPanel: TPanel;
     InspectorGrid: TStringGrid;
     LeftPanel: TPanel;
@@ -23,7 +24,8 @@ type
     SplitRight: TSplitter;
     WorkspaceMemo: TMemo;
     WorldTree: TTreeView;
-    procedure CommandEditKeyPress(Sender: TObject; var Key: char);
+    procedure CommandMemoChange(Sender: TObject);
+    procedure CommandMemoKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -31,7 +33,10 @@ type
     FWorld: TWorld;
     FSession: TGameSession;
     FBuilder: TBuilderSession;
+    FProcessingInput: Boolean;
     procedure BuildStarterWorld;
+    procedure ExecuteInputLine(const ACommand: string);
+    procedure ProcessPastedLines;
     procedure RefreshWorldView;
     procedure SubmitCommand;
   end;
@@ -67,7 +72,7 @@ end;
 
 procedure TWorldWrightMainForm.FormShow(Sender: TObject);
 begin
-  CommandEdit.SetFocus;
+  CommandMemo.SetFocus;
 end;
 
 procedure TWorldWrightMainForm.BuildStarterWorld;
@@ -116,20 +121,11 @@ begin
   end;
 end;
 
-procedure TWorldWrightMainForm.CommandEditKeyPress(Sender: TObject; var Key: char);
-begin
-  if Key = #13 then
-  begin
-    Key := #0;
-    SubmitCommand;
-  end;
-end;
-
-procedure TWorldWrightMainForm.SubmitCommand;
+procedure TWorldWrightMainForm.ExecuteInputLine(const ACommand: string);
 var
   Command, Response: string;
 begin
-  Command := Trim(CommandEdit.Text);
+  Command := Trim(ACommand);
   if Command = '' then
     Exit;
 
@@ -144,8 +140,69 @@ begin
     WorkspaceMemo.Lines.Add(Response);
 
   RefreshWorldView;
-  CommandEdit.Clear;
+end;
+
+procedure TWorldWrightMainForm.SubmitCommand;
+var
+  Command: string;
+begin
+  Command := Trim(CommandMemo.Text);
+  if Command = '' then
+    Exit;
+
+  FProcessingInput := True;
+  try
+    CommandMemo.Clear;
+  finally
+    FProcessingInput := False;
+  end;
+
+  ExecuteInputLine(Command);
   WorkspaceMemo.SelStart := Length(WorkspaceMemo.Text);
+end;
+
+procedure TWorldWrightMainForm.ProcessPastedLines;
+var
+  Lines: TStringList;
+  I: Integer;
+begin
+  if FProcessingInput then
+    Exit;
+  if CommandMemo.Lines.Count <= 1 then
+    Exit;
+
+  Lines := TStringList.Create;
+  try
+    Lines.Assign(CommandMemo.Lines);
+    FProcessingInput := True;
+    try
+      CommandMemo.Clear;
+    finally
+      FProcessingInput := False;
+    end;
+
+    for I := 0 to Lines.Count - 1 do
+      ExecuteInputLine(Lines[I]);
+
+    WorkspaceMemo.SelStart := Length(WorkspaceMemo.Text);
+  finally
+    Lines.Free;
+  end;
+end;
+
+procedure TWorldWrightMainForm.CommandMemoChange(Sender: TObject);
+begin
+  ProcessPastedLines;
+end;
+
+procedure TWorldWrightMainForm.CommandMemoKeyPress(Sender: TObject;
+  var Key: char);
+begin
+  if Key = #13 then
+  begin
+    Key := #0;
+    SubmitCommand;
+  end;
 end;
 
 end.
