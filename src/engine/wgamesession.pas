@@ -22,6 +22,9 @@ type
     function DescribeCurrentRoom: string;
     function Move(ADirection: TWorldDirection): string;
     function Examine(const ANounPhrase: string): string;
+    function Take(const ANounPhrase: string): string;
+    function Drop(const ANounPhrase: string): string;
+    function DescribeInventory: string;
   public
     constructor Create(AWorld: TWorld);
     function ExecuteCommand(const ACommand: string): string;
@@ -58,7 +61,8 @@ begin
     cached on the room, keeping one authoritative location reference. }
   ObjectsText := '';
   for WorldObject in FWorld.Objects do
-    if WorldObject.Room = FCurrentRoom then
+    if (WorldObject.LocationKind = olRoom) and
+      (WorldObject.Room = FCurrentRoom) then
     begin
       if ObjectsText <> '' then
         ObjectsText := ObjectsText + ', ';
@@ -102,6 +106,63 @@ begin
   Result := 'You see nothing special about the ' + WorldObject.Name + '.';
 end;
 
+function TGameSession.Take(const ANounPhrase: string): string;
+var
+  WorldObject: TWorldObject;
+  ResolveStatus: TObjectResolveStatus;
+begin
+  ResolveStatus := FWorld.ResolveObjectInRoom(FCurrentRoom, ANounPhrase,
+    WorldObject);
+  case ResolveStatus of
+    orsAmbiguous:
+      Exit('Which "' + Trim(ANounPhrase) + '" do you mean?');
+    orsNotFound:
+      Exit('You do not see "' + Trim(ANounPhrase) + '" here.');
+  end;
+
+  WorldObject.MoveToPlayerInventory;
+  Result := 'Taken.';
+end;
+
+function TGameSession.Drop(const ANounPhrase: string): string;
+var
+  WorldObject: TWorldObject;
+  ResolveStatus: TObjectResolveStatus;
+begin
+  ResolveStatus := FWorld.ResolveObjectInInventory(ANounPhrase, WorldObject);
+  case ResolveStatus of
+    orsAmbiguous:
+      Exit('Which "' + Trim(ANounPhrase) + '" do you mean?');
+    orsNotFound:
+      Exit('You are not carrying "' + Trim(ANounPhrase) + '".');
+  end;
+
+  if FCurrentRoom = nil then
+    Exit('You are nowhere, so there is nowhere to drop it.');
+  WorldObject.MoveToRoom(FCurrentRoom);
+  Result := 'Dropped.';
+end;
+
+function TGameSession.DescribeInventory: string;
+var
+  WorldObject: TWorldObject;
+  InventoryText: string;
+begin
+  InventoryText := '';
+  for WorldObject in FWorld.Objects do
+    if WorldObject.LocationKind = olPlayerInventory then
+    begin
+      if InventoryText <> '' then
+        InventoryText := InventoryText + ', ';
+      InventoryText := InventoryText + WorldObject.Name;
+    end;
+
+  if InventoryText = '' then
+    Result := 'You are carrying nothing.'
+  else
+    Result := 'You are carrying ' + InventoryText + '.';
+end;
+
 function TGameSession.ExecuteCommand(const ACommand: string): string;
 var
   Parsed: TParsedPlayerCommand;
@@ -117,6 +178,12 @@ begin
       Result := Move(Parsed.Direction);
     pcExamine:
       Result := Examine(Parsed.NounPhrase);
+    pcTake:
+      Result := Take(Parsed.NounPhrase);
+    pcDrop:
+      Result := Drop(Parsed.NounPhrase);
+    pcInventory:
+      Result := DescribeInventory;
   else
     Result := 'I do not understand "' + Trim(ACommand) + '".';
   end;
