@@ -26,6 +26,16 @@ begin
   Check((Parsed.Kind = pcMove) and (Parsed.Direction = wdWest),
     'WEST was not recognized as west movement');
 
+  Parsed := ParsePlayerCommand('examine brass key');
+  Check((Parsed.Kind = pcExamine) and
+    (Parsed.NounPhrase = 'brass key'),
+    'EXAMINE did not preserve its noun phrase');
+
+  Parsed := ParsePlayerCommand('X brass key');
+  Check((Parsed.Kind = pcExamine) and
+    (Parsed.NounPhrase = 'brass key'),
+    'X did not parse as EXAMINE');
+
   Parsed := ParsePlayerCommand('dance');
   Check(Parsed.Kind = pcUnknown, 'unknown input was not preserved as unknown');
 
