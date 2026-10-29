@@ -27,7 +27,6 @@ type
     function CreateRoom(const AName: string): string;
     function CreateObject(const AName: string): string;
     function DescribeObject(const AArguments: string): string;
-    function FindObjectInCurrentRoom(const ANameOrID: string): TWorldObject;
     function DescribeRoom(const ADescription: string): string;
     function RenameRoom(const AName: string): string;
     function MoveToRoom(const ARoom: string): string;
@@ -135,26 +134,12 @@ begin
     FGameSession.CurrentRoom.Name + '".';
 end;
 
-function TBuilderSession.FindObjectInCurrentRoom(
-  const ANameOrID: string): TWorldObject;
-var
-  WorldObject: TWorldObject;
-begin
-  { Builder object lookup is intentionally scoped to the current room. This
-    avoids silently editing a same-named object elsewhere in the world. }
-  for WorldObject in FWorld.Objects do
-    if (WorldObject.Room = FGameSession.CurrentRoom) and
-      (SameText(WorldObject.ID, Trim(ANameOrID)) or
-       SameText(WorldObject.Name, Trim(ANameOrID))) then
-      Exit(WorldObject);
-  Result := nil;
-end;
-
 function TBuilderSession.DescribeObject(const AArguments: string): string;
 var
   ObjectRef, Description: string;
   SpacePos: SizeInt;
   WorldObject: TWorldObject;
+  ResolveStatus: TObjectResolveStatus;
 begin
   if FGameSession.CurrentRoom = nil then
     Exit('There is no current room containing the object.');
@@ -168,8 +153,12 @@ begin
   if Description = '' then
     Exit('Usage: @DESCRIBEOBJECT <object> <description>');
 
-  WorldObject := FindObjectInCurrentRoom(ObjectRef);
-  if WorldObject = nil then
+  ResolveStatus := FWorld.ResolveObjectInRoom(FGameSession.CurrentRoom,
+    ObjectRef, WorldObject);
+  if ResolveStatus = orsAmbiguous then
+    Exit('Object name "' + ObjectRef +
+      '" is ambiguous in the current room; use its stable ID.');
+  if ResolveStatus = orsNotFound then
     Exit('Object "' + ObjectRef + '" was not found in the current room.');
 
   WorldObject.Description := Description;
