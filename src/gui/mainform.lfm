@@ -68,36 +68,49 @@ object WorldWrightMainForm: TWorldWrightMainForm
     Width = 5
     Align = alRight
   end
-  object CommandPanel: TPanel
+  object CenterPanel: TPanel
     Left = 225
-    Height = 34
-    Top = 666
-    Width = 590
-    Align = alBottom
-    BevelOuter = bvNone
-    Caption = ''
-    ClientHeight = 34
-    ClientWidth = 590
-    TabOrder = 3
-    object CommandEdit: TEdit
-      Left = 0
-      Height = 34
-      Top = 0
-      Width = 590
-      Align = alClient
-      OnKeyPress = CommandEditKeyPress
-      TabOrder = 0
-      TextHint = 'Enter a player command...'
-    end
-  end
-  object WorkspaceMemo: TMemo
-    Left = 225
-    Height = 666
+    Height = 700
     Top = 0
     Width = 590
     Align = alClient
-    ReadOnly = True
-    ScrollBars = ssAutoVertical
-    TabOrder = 4
+    BevelOuter = bvNone
+    Caption = ''
+    ClientHeight = 700
+    ClientWidth = 590
+    TabOrder = 3
+    object CommandPanel: TPanel
+      Left = 0
+      Height = 40
+      Top = 660
+      Width = 590
+      Align = alBottom
+      BevelOuter = bvNone
+      Caption = ''
+      ClientHeight = 40
+      ClientWidth = 590
+      TabOrder = 1
+      object CommandMemo: TMemo
+        Left = 0
+        Height = 40
+        Top = 0
+        Width = 590
+        Align = alClient
+        OnChange = CommandMemoChange
+        OnKeyPress = CommandMemoKeyPress
+        ScrollBars = ssAutoVertical
+        TabOrder = 0
+      end
+    end
+    object WorkspaceMemo: TMemo
+      Left = 0
+      Height = 660
+      Top = 0
+      Width = 590
+      Align = alClient
+      ReadOnly = True
+      ScrollBars = ssAutoVertical
+      TabOrder = 0
+    end
   end
 end
