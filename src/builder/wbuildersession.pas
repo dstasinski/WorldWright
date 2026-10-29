@@ -19,6 +19,7 @@ type
     function CreateRoom(const AName: string): string;
     function DescribeRoom(const ADescription: string): string;
     function RenameRoom(const AName: string): string;
+    function MoveToRoom(const ARoom: string): string;
     function ConnectRoom(const AArguments: string): string;
     function FindRoom(const ANameOrID: string): TWorldRoom;
     function ParseDirection(const AText: string; out ADirection,
@@ -131,6 +132,24 @@ begin
   Result := 'Renamed room "' + OldName + '" to "' + Name + '".';
 end;
 
+
+function TBuilderSession.MoveToRoom(const ARoom: string): string;
+var
+  TargetText: string;
+  Target: TWorldRoom;
+begin
+  TargetText := Trim(ARoom);
+  if TargetText = '' then
+    Exit('Usage: @MOVE <room>');
+
+  Target := FindRoom(TargetText);
+  if Target = nil then
+    Exit('Room "' + TargetText + '" was not found.');
+
+  FGameSession.CurrentRoom := Target;
+  Result := 'Moved builder location to "' + Target.Name + '".';
+end;
+
 function TBuilderSession.FindRoom(const ANameOrID: string): TWorldRoom;
 var
   Room: TWorldRoom;
@@ -228,6 +247,8 @@ begin
     Exit(DescribeRoom(Argument));
   if SameText(Command, '@RENAME') then
     Exit(RenameRoom(Argument));
+  if SameText(Command, '@MOVE') then
+    Exit(MoveToRoom(Argument));
   if SameText(Command, '@CONNECT') then
     Exit(ConnectRoom(Argument));
 
