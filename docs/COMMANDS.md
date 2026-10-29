@@ -40,12 +40,14 @@ automatically describes the destination room.
 **Syntax:** `EXAMINE <object>`  
 **Alias:** `X <object>`
 
-Examines an object visible in the current room.
+Examines an object visible to the player. At the current development stage,
+visible objects consist of objects in the current room plus objects carried in
+player inventory.
 
-Object names are not required to be globally unique. If exactly one object in
-the current room has the requested name, it is examined. If multiple visible
-objects have the same name, WorldWright reports the ambiguity rather than
-arbitrarily choosing one.
+Object names are not required to be globally unique. If exactly one visible
+object has the requested name, it is examined. If multiple visible objects have
+the same name, including one carried object and one same-named room object,
+WorldWright reports the ambiguity rather than arbitrarily choosing one.
 
 Examples:
 
@@ -200,7 +202,8 @@ WorldWright's object-command behavior follows this rule:
 
 This rule is common infrastructure for `EXAMINE`, `TAKE`, `DROP`, builder
 object editing, and future commands such as `GIVE`, container interactions,
-and GUI editing. TAKE resolves against the current room; DROP resolves against
+and GUI editing. EXAMINE resolves against visible objects (current room plus
+inventory), TAKE resolves against the current room, and DROP resolves against
 player inventory.
 
 ## Planned commands
