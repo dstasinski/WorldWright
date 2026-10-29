@@ -20,7 +20,7 @@
         <PackageName Value="LCL"/>
       </Item1>
     </RequiredPackages>
-    <Units Count="4">
+    <Units Count="5">
       <Unit0>
         <Filename Value="worldwright.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -43,6 +43,11 @@
         <IsPartOfProject Value="True"/>
         <UnitName Value="WBuilderSession"/>
       </Unit3>
+      <Unit4>
+        <Filename Value="parser/wparser.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="WParser"/>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -50,7 +55,7 @@
     <PathDelim Value="\\"/>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="gui;core;engine;builder"/>
+      <OtherUnitFiles Value="gui;core;engine;builder;parser"/>
       <UnitOutputDirectory Value="../build"/>
     </SearchPaths>
     <Linking>
