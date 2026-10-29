@@ -27,6 +27,7 @@ type
     function CreateRoom(const AName: string): string;
     function CreateObject(const AName: string): string;
     function DescribeObject(const AArguments: string): string;
+    function DistinguishObject(const AArguments: string): string;
     function DescribeRoom(const ADescription: string): string;
     function RenameRoom(const AName: string): string;
     function MoveToRoom(const ARoom: string): string;
@@ -163,6 +164,38 @@ begin
 
   WorldObject.Description := Description;
   Result := 'Description updated for object "' + WorldObject.Name + '".';
+end;
+
+function TBuilderSession.DistinguishObject(const AArguments: string): string;
+var
+  ObjectRef, DistinguishingText: string;
+  SpacePos: SizeInt;
+  WorldObject: TWorldObject;
+  ResolveStatus: TObjectResolveStatus;
+begin
+  if FGameSession.CurrentRoom = nil then
+    Exit('There is no current room containing the object.');
+
+  SpacePos := Pos(' ', Trim(AArguments));
+  if SpacePos = 0 then
+    Exit('Usage: @DISTINGUISH <object> <text>');
+
+  ObjectRef := Copy(Trim(AArguments), 1, SpacePos - 1);
+  DistinguishingText := Trim(Copy(Trim(AArguments), SpacePos + 1, MaxInt));
+  if DistinguishingText = '' then
+    Exit('Usage: @DISTINGUISH <object> <text>');
+
+  ResolveStatus := FWorld.ResolveObjectInRoom(FGameSession.CurrentRoom,
+    ObjectRef, WorldObject);
+  if ResolveStatus = orsAmbiguous then
+    Exit('Object name "' + ObjectRef +
+      '" is ambiguous in the current room; use its stable ID.');
+  if ResolveStatus = orsNotFound then
+    Exit('Object "' + ObjectRef + '" was not found in the current room.');
+
+  WorldObject.DistinguishingText := DistinguishingText;
+  Result := 'Distinguishing text updated for object "' +
+    WorldObject.Name + '".';
 end;
 
 function TBuilderSession.DescribeRoom(const ADescription: string): string;
