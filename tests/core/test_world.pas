@@ -49,6 +49,17 @@ begin
       ResolvedObject);
     Check((ResolveStatus = orsUnique) and (ResolvedObject = OtherKey),
       'stable object ID did not resolve the exact duplicate-named object');
+
+    BrassKey.MoveToPlayerInventory;
+    ResolveStatus := World.ResolveVisibleObject(Laboratory, 'brass key',
+      ResolvedObject);
+    Check(ResolveStatus = orsAmbiguous,
+      'visible lookup did not combine room and inventory name matches');
+    ResolveStatus := World.ResolveVisibleObject(Laboratory, 'brass_key',
+      ResolvedObject);
+    Check((ResolveStatus = orsUnique) and (ResolvedObject = BrassKey),
+      'visible lookup did not honor an exact stable ID');
+    BrassKey.MoveToRoom(Laboratory);
     Check(Laboratory.ID = 'laboratory', 'stable room ID changed');
     Check(Laboratory.Name = 'Laboratory', 'room name was not retained');
     Check(Laboratory.Description <> '', 'room description was not retained');
