@@ -7,6 +7,7 @@ object WorldWrightMainForm: TWorldWrightMainForm
   ClientHeight = 700
   ClientWidth = 1100
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   Position = poScreenCenter
   LCLVersion = '4.8.0.0'
   object LeftPanel: TPanel
@@ -54,6 +55,7 @@ object WorldWrightMainForm: TWorldWrightMainForm
       Align = alClient
       ColCount = 2
       FixedCols = 0
+      FixedRows = 1
       RowCount = 5
       TabOrder = 0
     end
@@ -82,8 +84,9 @@ object WorldWrightMainForm: TWorldWrightMainForm
       Top = 0
       Width = 590
       Align = alClient
+      OnKeyPress = CommandEditKeyPress
       TabOrder = 0
-      TextHint = 'Enter a player command or @builder command...'
+      TextHint = 'Enter a player command...'
     end
   end
   object WorkspaceMemo: TMemo
