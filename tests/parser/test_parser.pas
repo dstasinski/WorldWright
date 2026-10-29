@@ -36,6 +36,23 @@ begin
     (Parsed.NounPhrase = 'brass key'),
     'X did not parse as EXAMINE');
 
+  Parsed := ParsePlayerCommand('take brass key');
+  Check((Parsed.Kind = pcTake) and (Parsed.NounPhrase = 'brass key'),
+    'TAKE did not preserve its noun phrase');
+
+  Parsed := ParsePlayerCommand('get brass key');
+  Check(Parsed.Kind = pcTake, 'GET did not parse as TAKE');
+
+  Parsed := ParsePlayerCommand('drop brass key');
+  Check((Parsed.Kind = pcDrop) and (Parsed.NounPhrase = 'brass key'),
+    'DROP did not preserve its noun phrase');
+
+  Parsed := ParsePlayerCommand('inventory');
+  Check(Parsed.Kind = pcInventory, 'INVENTORY was not recognized');
+
+  Parsed := ParsePlayerCommand('i');
+  Check(Parsed.Kind = pcInventory, 'I did not parse as INVENTORY');
+
   Parsed := ParsePlayerCommand('dance');
   Check(Parsed.Kind = pcUnknown, 'unknown input was not preserved as unknown');
 
