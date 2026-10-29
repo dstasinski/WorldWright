@@ -90,8 +90,10 @@ type
     procedure MoveToRoom(ARoom: TWorldRoom);
     procedure MoveToPlayerInventory;
     property Description: string read FDescription write FDescription;
-    { Short author-facing/player-facing qualifier used to tag objects
-      that intentionally share the same display name. }
+    { Complete player-facing reference phrase. When present, Tag is used as an
+      exact alternate reference and display phrase; it is not automatically
+      combined with Name. Name and stable ID remain independent authoring
+      identity fields. }
     property Tag: string read FTag
       write FTag;
     property LocationKind: TWorldObjectLocationKind read FLocationKind;
@@ -266,15 +268,14 @@ begin
       Exit(orsUnique);
     end;
 
-  { A tag phrase is an exact alternate player reference, not fuzzy
-    adjective matching. Normal display-name matching remains the next fallback. }
+  { Tag is a complete exact alternate player reference, not a prefix and not
+    fuzzy matching. Normal Name matching remains the next fallback. }
   MatchCount := 0;
   for WorldObject in FObjects do
     if (WorldObject.LocationKind = olRoom) and
       (WorldObject.Room = ARoom) and
       (Trim(WorldObject.Tag) <> '') and
-      SameText(WorldObject.Tag + ' ' + WorldObject.Name,
-        ReferenceText) then
+      SameText(WorldObject.Tag, ReferenceText) then
     begin
       Inc(MatchCount);
       if MatchCount = 1 then
@@ -327,14 +328,13 @@ begin
       Exit(orsUnique);
     end;
 
-  { A tag phrase is an exact alternate player reference, not fuzzy
-    adjective matching. Normal display-name matching remains the next fallback. }
+  { Tag is a complete exact alternate player reference, not a prefix and not
+    fuzzy matching. Normal Name matching remains the next fallback. }
   MatchCount := 0;
   for WorldObject in FObjects do
     if (WorldObject.LocationKind = olPlayerInventory) and
       (Trim(WorldObject.Tag) <> '') and
-      SameText(WorldObject.Tag + ' ' + WorldObject.Name,
-        ReferenceText) then
+      SameText(WorldObject.Tag, ReferenceText) then
     begin
       Inc(MatchCount);
       if MatchCount = 1 then
@@ -394,15 +394,14 @@ begin
     end;
   end;
 
-  { A tag phrase is an exact alternate player reference, not fuzzy
-    adjective matching. Normal display-name matching remains the next fallback. }
+  { Tag is a complete exact alternate player reference, not a prefix and not
+    fuzzy matching. Normal Name matching remains the next fallback. }
   MatchCount := 0;
   for WorldObject in FObjects do
     if (((WorldObject.LocationKind = olPlayerInventory) or
        ((WorldObject.LocationKind = olRoom) and (WorldObject.Room = ARoom)))) and
       (Trim(WorldObject.Tag) <> '') and
-      SameText(WorldObject.Tag + ' ' + WorldObject.Name,
-        ReferenceText) then
+      SameText(WorldObject.Tag, ReferenceText) then
     begin
       Inc(MatchCount);
       if MatchCount = 1 then
