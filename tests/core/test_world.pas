@@ -46,6 +46,14 @@ begin
     Check(Laboratory.Exits.Count = 1,
       'replacing an exit left a duplicate direction');
 
+    Hallway.Connect(wdEast, ObservationDeck);
+    World.DeleteRoom(ObservationDeck);
+    Check(World.Rooms.Count = 2, 'room deletion did not update room count');
+    Check(Laboratory.ExitTo(wdNorth) = nil,
+      'room deletion left a dangling north exit');
+    Check(Hallway.ExitTo(wdEast) = nil,
+      'room deletion left a dangling east exit');
+
     WriteLn('PASS: WorldWright core world-model smoke test');
   finally
     World.Free;
