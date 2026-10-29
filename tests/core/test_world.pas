@@ -7,7 +7,7 @@ uses
 
 var
   World: TWorld;
-  Room: TWorldRoom;
+  Laboratory, Hallway: TWorldRoom;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
 begin
@@ -18,13 +18,24 @@ end;
 begin
   World := TWorld.Create;
   try
-    Room := World.AddRoom('laboratory', 'Laboratory');
-    Room.Description := 'A dusty laboratory filled with abandoned equipment.';
+    Laboratory := World.AddRoom('laboratory', 'Laboratory');
+    Laboratory.Description :=
+      'A dusty laboratory filled with abandoned equipment.';
+    Hallway := World.AddRoom('hallway', 'Hallway');
 
-    Check(World.Rooms.Count = 1, 'room was not added');
-    Check(Room.ID = 'laboratory', 'stable room ID changed');
-    Check(Room.Name = 'Laboratory', 'room name was not retained');
-    Check(Room.Description <> '', 'room description was not retained');
+    Laboratory.Connect(wdNorth, Hallway);
+    Hallway.Connect(wdSouth, Laboratory);
+
+    Check(World.Rooms.Count = 2, 'rooms were not added');
+    Check(Laboratory.ID = 'laboratory', 'stable room ID changed');
+    Check(Laboratory.Name = 'Laboratory', 'room name was not retained');
+    Check(Laboratory.Description <> '', 'room description was not retained');
+    Check(Laboratory.ExitTo(wdNorth) = Hallway,
+      'north exit did not point to hallway');
+    Check(Hallway.ExitTo(wdSouth) = Laboratory,
+      'south exit did not point to laboratory');
+    Check(Laboratory.ExitTo(wdEast) = nil,
+      'missing exit unexpectedly had a destination');
 
     WriteLn('PASS: WorldWright core world-model smoke test');
   finally
