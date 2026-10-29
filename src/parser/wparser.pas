@@ -1,5 +1,11 @@
 unit WParser;
 
+{ Player command recognition.
+
+  This unit converts raw player text into a small semantic command record. It
+  does not inspect or mutate the world. Entity resolution and command effects
+  belong to the engine so grammar can evolve independently of game state. }
+
 {$mode objfpc}{$H+}
 
 interface
@@ -18,6 +24,9 @@ type
     NounPhrase: string;
   end;
 
+{ ParsePlayerCommand is case-insensitive for verbs and directions, while
+  preserving the user's noun phrase text for later engine-side resolution.
+  pcUnknown means the parser recognized no supported command form. }
 function ParsePlayerCommand(const AInput: string): TParsedPlayerCommand;
 
 implementation
