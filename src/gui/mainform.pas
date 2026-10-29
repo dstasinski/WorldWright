@@ -5,13 +5,14 @@ unit MainForm;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Grids;
+  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Grids,
+  WWorld, WGameSession;
 
 type
   { TWorldWrightMainForm is WorldWright's single top-level application window.
-    Its permanent controls and layout live in mainform.lfm so contributors can
-    edit the interface with the Lazarus Form Designer. Pascal code here is
-    reserved for behavior and runtime-created content. }
+    Static layout lives in mainform.lfm. This unit coordinates the GUI with
+    the live model and game session; parser/engine behavior belongs outside
+    the form. }
   TWorldWrightMainForm = class(TForm)
     CommandEdit: TEdit;
     CommandPanel: TPanel;
@@ -22,9 +23,15 @@ type
     SplitRight: TSplitter;
     WorkspaceMemo: TMemo;
     WorldTree: TTreeView;
+    procedure CommandEditKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
   private
-    procedure PopulateMockContent;
+    FWorld: TWorld;
+    FSession: TGameSession;
+    procedure BuildStarterWorld;
+    procedure RefreshWorldView;
+    procedure SubmitCommand;
   end;
 
 var
@@ -36,40 +43,89 @@ implementation
 
 procedure TWorldWrightMainForm.FormCreate(Sender: TObject);
 begin
-  PopulateMockContent;
-end;
+  FWorld := TWorld.Create;
+  BuildStarterWorld;
+  FSession := TGameSession.Create(FWorld);
+  RefreshWorldView;
 
-procedure TWorldWrightMainForm.PopulateMockContent;
-var
-  WorldNode, RoomNode: TTreeNode;
-begin
-  { Temporary content makes the initial shell recognizable when first opened.
-    It will be removed once the GUI is connected to the live world model. }
-  WorldNode := WorldTree.Items.Add(nil, 'World');
-  RoomNode := WorldTree.Items.AddChild(WorldNode, 'Laboratory');
-  WorldTree.Items.AddChild(RoomNode, 'Desk');
-  WorldTree.Items.AddChild(RoomNode, 'Brass Key');
-  WorldNode.Expand(True);
-
+  WorkspaceMemo.Clear;
   WorkspaceMemo.Lines.Add('WorldWright');
   WorkspaceMemo.Lines.Add('Build your adventure from the inside.');
   WorkspaceMemo.Lines.Add('');
-  WorkspaceMemo.Lines.Add('Laboratory');
-  WorkspaceMemo.Lines.Add('A dusty laboratory filled with abandoned equipment.');
-  WorkspaceMemo.Lines.Add('');
-  WorkspaceMemo.Lines.Add('> LOOK');
-  WorkspaceMemo.Lines.Add('');
-  WorkspaceMemo.Lines.Add('This is an initial interface shell. No game engine is active yet.');
+  WorkspaceMemo.Lines.Add(FSession.ExecuteCommand('LOOK'));
+  CommandEdit.SetFocus;
+end;
+
+procedure TWorldWrightMainForm.FormDestroy(Sender: TObject);
+begin
+  FSession.Free;
+  FWorld.Free;
+end;
+
+procedure TWorldWrightMainForm.BuildStarterWorld;
+var
+  Room: TWorldRoom;
+begin
+  Room := FWorld.AddRoom('laboratory', 'Laboratory');
+  Room.Description := 'A dusty laboratory filled with abandoned equipment.';
+end;
+
+procedure TWorldWrightMainForm.RefreshWorldView;
+var
+  WorldNode, RoomNode: TTreeNode;
+  Room: TWorldRoom;
+begin
+  WorldTree.Items.Clear;
+  WorldNode := WorldTree.Items.Add(nil, 'World');
+
+  for Room in FWorld.Rooms do
+    RoomNode := WorldTree.Items.AddChild(WorldNode, Room.Name);
+
+  WorldNode.Expand(True);
 
   InspectorGrid.RowCount := 5;
-  InspectorGrid.Cells[0, 1] := 'Name';
-  InspectorGrid.Cells[1, 1] := 'Laboratory';
-  InspectorGrid.Cells[0, 2] := 'ID';
-  InspectorGrid.Cells[1, 2] := 'laboratory';
-  InspectorGrid.Cells[0, 3] := 'Kind';
-  InspectorGrid.Cells[1, 3] := 'Room';
-  InspectorGrid.Cells[0, 4] := 'Description';
-  InspectorGrid.Cells[1, 4] := 'A dusty laboratory...';
+  InspectorGrid.Cells[0, 0] := 'Property';
+  InspectorGrid.Cells[1, 0] := 'Value';
+
+  if FSession.CurrentRoom <> nil then
+  begin
+    InspectorGrid.Cells[0, 1] := 'Name';
+    InspectorGrid.Cells[1, 1] := FSession.CurrentRoom.Name;
+    InspectorGrid.Cells[0, 2] := 'ID';
+    InspectorGrid.Cells[1, 2] := FSession.CurrentRoom.ID;
+    InspectorGrid.Cells[0, 3] := 'Kind';
+    InspectorGrid.Cells[1, 3] := 'Room';
+    InspectorGrid.Cells[0, 4] := 'Description';
+    InspectorGrid.Cells[1, 4] := FSession.CurrentRoom.Description;
+  end;
+end;
+
+procedure TWorldWrightMainForm.CommandEditKeyPress(Sender: TObject; var Key: char);
+begin
+  if Key = #13 then
+  begin
+    Key := #0;
+    SubmitCommand;
+  end;
+end;
+
+procedure TWorldWrightMainForm.SubmitCommand;
+var
+  Command, Response: string;
+begin
+  Command := Trim(CommandEdit.Text);
+  if Command = '' then
+    Exit;
+
+  WorkspaceMemo.Lines.Add('');
+  WorkspaceMemo.Lines.Add('> ' + Command);
+
+  Response := FSession.ExecuteCommand(Command);
+  if Response <> '' then
+    WorkspaceMemo.Lines.Add(Response);
+
+  CommandEdit.Clear;
+  WorkspaceMemo.SelStart := Length(WorkspaceMemo.Text);
 end;
 
 end.
