@@ -27,7 +27,7 @@ type
     function CreateRoom(const AName: string): string;
     function CreateObject(const AName: string): string;
     function DescribeObject(const AArguments: string): string;
-    function DistinguishObject(const AArguments: string): string;
+    function TagObject(const AArguments: string): string;
     function DescribeRoom(const ADescription: string): string;
     function RenameRoom(const AName: string): string;
     function MoveToRoom(const ARoom: string): string;
@@ -166,9 +166,9 @@ begin
   Result := 'Description updated for object "' + WorldObject.Name + '".';
 end;
 
-function TBuilderSession.DistinguishObject(const AArguments: string): string;
+function TBuilderSession.TagObject(const AArguments: string): string;
 var
-  ObjectRef, DistinguishingText: string;
+  ObjectRef, Tag: string;
   SpacePos: SizeInt;
   WorldObject: TWorldObject;
   ResolveStatus: TObjectResolveStatus;
@@ -178,12 +178,12 @@ begin
 
   SpacePos := Pos(' ', Trim(AArguments));
   if SpacePos = 0 then
-    Exit('Usage: @DISTINGUISH <object> <text>');
+    Exit('Usage: @TAG <object> <tag>');
 
   ObjectRef := Copy(Trim(AArguments), 1, SpacePos - 1);
-  DistinguishingText := Trim(Copy(Trim(AArguments), SpacePos + 1, MaxInt));
-  if DistinguishingText = '' then
-    Exit('Usage: @DISTINGUISH <object> <text>');
+  Tag := Trim(Copy(Trim(AArguments), SpacePos + 1, MaxInt));
+  if Tag = '' then
+    Exit('Usage: @TAG <object> <tag>');
 
   ResolveStatus := FWorld.ResolveObjectInRoom(FGameSession.CurrentRoom,
     ObjectRef, WorldObject);
@@ -193,8 +193,8 @@ begin
   if ResolveStatus = orsNotFound then
     Exit('Object "' + ObjectRef + '" was not found in the current room.');
 
-  WorldObject.DistinguishingText := DistinguishingText;
-  Result := 'Distinguishing text updated for object "' +
+  WorldObject.Tag := Tag;
+  Result := 'Tag updated for object "' +
     WorldObject.Name + '".';
 end;
 
@@ -369,8 +369,8 @@ begin
     Exit(CreateObject(Argument));
   if SameText(Command, '@DESCRIBEOBJECT') then
     Exit(DescribeObject(Argument));
-  if SameText(Command, '@DISTINGUISH') then
-    Exit(DistinguishObject(Argument));
+  if SameText(Command, '@TAG') then
+    Exit(TagObject(Argument));
   if SameText(Command, '@DESCRIBE') then
     Exit(DescribeRoom(Argument));
   if SameText(Command, '@RENAME') then
