@@ -111,6 +111,9 @@ type
     { Add methods transfer ownership of the returned entity to TWorld. }
     function AddRoom(const AID, AName: string): TWorldRoom;
     function AddObject(const AID, AName: string; ARoom: TWorldRoom): TWorldObject;
+    { Stable IDs are the safe long-lived reference used by transient systems
+      such as pending parser choices. The returned object remains world-owned. }
+    function FindObjectByID(const AID: string): TWorldObject;
     function ResolveObjectInRoom(ARoom: TWorldRoom; const ANameOrID: string;
       out AObject: TWorldObject): TObjectResolveStatus;
     function ResolveObjectInInventory(const ANameOrID: string;
@@ -231,6 +234,16 @@ function TWorld.AddObject(const AID, AName: string;
 begin
   Result := TWorldObject.Create(AID, AName, ARoom);
   FObjects.Add(Result);
+end;
+
+function TWorld.FindObjectByID(const AID: string): TWorldObject;
+var
+  WorldObject: TWorldObject;
+begin
+  for WorldObject in FObjects do
+    if SameText(WorldObject.ID, Trim(AID)) then
+      Exit(WorldObject);
+  Result := nil;
 end;
 
 function TWorld.ResolveObjectInRoom(ARoom: TWorldRoom;
