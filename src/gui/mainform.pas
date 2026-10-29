@@ -151,6 +151,20 @@ begin
   if (WorldTree.Selected <> nil) and (WorldTree.Selected.Data <> nil) then
     SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
 
+  { Inventory is a structural/session node rather than a TWorldEntity. Give it
+    explicit inspector content instead of falling through to CurrentRoom. }
+  if (WorldTree.Selected <> nil) and
+    (WorldTree.Selected.Data = nil) and
+    SameText(WorldTree.Selected.Text, 'Inventory') then
+  begin
+    InspectorGrid.RowCount := 3;
+    InspectorGrid.Cells[0, 1] := 'Name';
+    InspectorGrid.Cells[1, 1] := 'Inventory';
+    InspectorGrid.Cells[0, 2] := 'Kind';
+    InspectorGrid.Cells[1, 2] := 'Player Inventory';
+    Exit;
+  end;
+
   if SelectedEntity is TWorldObject then
   begin
     SelectedObject := TWorldObject(SelectedEntity);
