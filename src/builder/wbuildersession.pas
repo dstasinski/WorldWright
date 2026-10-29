@@ -17,6 +17,7 @@ type
     function MakeRoomID(const AName: string): string;
     function RoomIDExists(const AID: string): Boolean;
     function CreateRoom(const AName: string): string;
+    function CreateObject(const AName: string): string;
     function DescribeRoom(const ADescription: string): string;
     function RenameRoom(const AName: string): string;
     function MoveToRoom(const ARoom: string): string;
@@ -99,6 +100,39 @@ begin
   Room := FWorld.AddRoom(ID, Name);
   FGameSession.CurrentRoom := Room;
   Result := 'Created room "' + Name + '" [' + ID + '].';
+end;
+
+function TBuilderSession.CreateObject(const AName: string): string;
+var
+  Name, ID: string;
+  WorldObject: TWorldObject;
+  Suffix: Integer;
+begin
+  Name := Trim(AName);
+  if Name = '' then
+    Exit('Usage: @OBJECT <name>');
+  if FGameSession.CurrentRoom = nil then
+    Exit('There is no current room for the object.');
+
+  ID := MakeRoomID(Name);
+  { MakeRoomID already avoids room IDs. Also avoid existing object IDs so all
+    newly authored entity identifiers remain unambiguous. }
+  Suffix := 2;
+  while True do
+  begin
+    WorldObject := nil;
+    for WorldObject in FWorld.Objects do
+      if SameText(WorldObject.ID, ID) then
+        Break;
+    if (WorldObject = nil) or not SameText(WorldObject.ID, ID) then
+      Break;
+    ID := MakeRoomID(Name) + '_' + IntToStr(Suffix);
+    Inc(Suffix);
+  end;
+
+  FWorld.AddObject(ID, Name, FGameSession.CurrentRoom);
+  Result := 'Created object "' + Name + '" [' + ID + '] in "' +
+    FGameSession.CurrentRoom.Name + '".';
 end;
 
 function TBuilderSession.DescribeRoom(const ADescription: string): string;
@@ -268,6 +302,8 @@ begin
 
   if SameText(Command, '@ROOM') then
     Exit(CreateRoom(Argument));
+  if SameText(Command, '@OBJECT') then
+    Exit(CreateObject(Argument));
   if SameText(Command, '@DESCRIBE') then
     Exit(DescribeRoom(Argument));
   if SameText(Command, '@RENAME') then
