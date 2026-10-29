@@ -18,6 +18,10 @@ type
     function RoomIDExists(const AID: string): Boolean;
     function CreateRoom(const AName: string): string;
     function DescribeRoom(const ADescription: string): string;
+    function ConnectRoom(const AArguments: string): string;
+    function FindRoom(const ANameOrID: string): TWorldRoom;
+    function ParseDirection(const AText: string; out ADirection,
+      AReverse: TWorldDirection): Boolean;
   public
     constructor Create(AWorld: TWorld; AGameSession: TGameSession);
     function ExecuteCommand(const ACommand: string): string;
@@ -109,6 +113,80 @@ begin
     FGameSession.CurrentRoom.Name + '".';
 end;
 
+
+function TBuilderSession.FindRoom(const ANameOrID: string): TWorldRoom;
+var
+  Room: TWorldRoom;
+begin
+  for Room in FWorld.Rooms do
+    if SameText(Room.ID, Trim(ANameOrID)) or
+      SameText(Room.Name, Trim(ANameOrID)) then
+      Exit(Room);
+  Result := nil;
+end;
+
+function TBuilderSession.ParseDirection(const AText: string; out ADirection,
+  AReverse: TWorldDirection): Boolean;
+begin
+  Result := True;
+  if SameText(AText, 'NORTH') or SameText(AText, 'N') then
+  begin
+    ADirection := wdNorth;
+    AReverse := wdSouth;
+  end
+  else if SameText(AText, 'SOUTH') or SameText(AText, 'S') then
+  begin
+    ADirection := wdSouth;
+    AReverse := wdNorth;
+  end
+  else if SameText(AText, 'EAST') or SameText(AText, 'E') then
+  begin
+    ADirection := wdEast;
+    AReverse := wdWest;
+  end
+  else if SameText(AText, 'WEST') or SameText(AText, 'W') then
+  begin
+    ADirection := wdWest;
+    AReverse := wdEast;
+  end
+  else
+    Result := False;
+end;
+
+function TBuilderSession.ConnectRoom(const AArguments: string): string;
+var
+  DirectionText, TargetText: string;
+  SpacePos: SizeInt;
+  Direction, Reverse: TWorldDirection;
+  Target: TWorldRoom;
+begin
+  if FGameSession.CurrentRoom = nil then
+    Exit('There is no current room to connect.');
+
+  SpacePos := Pos(' ', Trim(AArguments));
+  if SpacePos = 0 then
+    Exit('Usage: @CONNECT <direction> <room>');
+
+  DirectionText := Copy(Trim(AArguments), 1, SpacePos - 1);
+  TargetText := Trim(Copy(Trim(AArguments), SpacePos + 1, MaxInt));
+  if TargetText = '' then
+    Exit('Usage: @CONNECT <direction> <room>');
+
+  if not ParseDirection(DirectionText, Direction, Reverse) then
+    Exit('Unknown direction "' + DirectionText + '".');
+
+  Target := FindRoom(TargetText);
+  if Target = nil then
+    Exit('Room "' + TargetText + '" was not found.');
+  if Target = FGameSession.CurrentRoom then
+    Exit('A room cannot be connected to itself.');
+
+  FGameSession.CurrentRoom.Connect(Direction, Target);
+  Target.Connect(Reverse, FGameSession.CurrentRoom);
+  Result := 'Connected "' + FGameSession.CurrentRoom.Name + '" ' +
+    LowerCase(DirectionText) + ' to "' + Target.Name + '".';
+end;
+
 function TBuilderSession.ExecuteCommand(const ACommand: string): string;
 var
   Command, Argument: string;
@@ -131,6 +209,8 @@ begin
     Exit(CreateRoom(Argument));
   if SameText(Command, '@DESCRIBE') then
     Exit(DescribeRoom(Argument));
+  if SameText(Command, '@CONNECT') then
+    Exit(ConnectRoom(Argument));
 
   Result := 'Unknown builder command "' + Command + '".';
 end;
