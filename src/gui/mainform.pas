@@ -99,15 +99,14 @@ begin
   Hallway.Connect(wdSouth, Laboratory);
 end;
 
-{ Return the author-facing object label used by the World Tree. A Tag is a
-  parser-visible prefix qualifier, so showing the same phrase here makes
-  otherwise identical object names distinguishable without changing Name or ID.
-  Tagged labels also expose the stable ID in brackets because authors commonly
-  need that exact reference for builder commands when display names collide. }
+{ Return the author-facing object label used by the World Tree. Tag is the
+  complete player-facing phrase when present, so it replaces Name in this
+  projection rather than being prepended to it. Tagged labels also expose the
+  stable ID because authors commonly need that exact builder reference. }
 function TWorldWrightMainForm.ObjectTreeLabel(AObject: TWorldObject): string;
 begin
   if Trim(AObject.Tag) <> '' then
-    Result := Trim(AObject.Tag) + ' ' + AObject.Name + ' [' + AObject.ID + ']'
+    Result := Trim(AObject.Tag) + ' [' + AObject.ID + ']'
   else
     Result := AObject.Name;
 end;
