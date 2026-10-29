@@ -96,16 +96,17 @@ end;
   in the tree or grid. }
 procedure TWorldWrightMainForm.RefreshWorldView;
 var
-  WorldNode, RoomNode: TTreeNode;
+  WorldNode, RoomNode, InventoryNode: TTreeNode;
   Room: TWorldRoom;
   WorldObject: TWorldObject;
 begin
   WorldTree.Items.Clear;
   WorldNode := WorldTree.Items.Add(nil, 'World');
 
-  { The tree is a projection of persistent world structure. Room-located
-    objects belong beneath their room; player inventory is transient session
-    state and is deliberately not represented as part of this hierarchy. }
+  { The tree is a projection of the complete live object state. Room-located
+    objects appear beneath their structural room. Carried objects are grouped
+    separately under Inventory so transient player state is visible without
+    falsely presenting inventory as a room or persistent containment parent. }
   for Room in FWorld.Rooms do
   begin
     RoomNode := WorldTree.Items.AddChild(WorldNode, Room.Name);
@@ -115,6 +116,12 @@ begin
         WorldTree.Items.AddChild(RoomNode, WorldObject.Name);
     RoomNode.Expand(True);
   end;
+
+  InventoryNode := WorldTree.Items.AddChild(WorldNode, 'Inventory');
+  for WorldObject in FWorld.Objects do
+    if WorldObject.LocationKind = olPlayerInventory then
+      WorldTree.Items.AddChild(InventoryNode, WorldObject.Name);
+  InventoryNode.Expand(True);
 
   WorldNode.Expand(True);
 
