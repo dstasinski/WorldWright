@@ -9,6 +9,7 @@ uses
 
 type
   TWorldRoom = class;
+  TWorldObject = class;
 
   { TWorldDirection is deliberately target-independent. Exporters may translate
     these values into their own syntax without changing the live model. }
@@ -57,16 +58,33 @@ type
 
   TWorldRoomList = specialize TObjectList<TWorldRoom>;
 
+  { TWorldObject is a physical entity that can initially exist in a room.
+    Inventory and containment will extend location semantics in later slices. }
+  TWorldObject = class(TWorldEntity)
+  private
+    FDescription: string;
+    FRoom: TWorldRoom;
+  public
+    constructor Create(const AID, AName: string; ARoom: TWorldRoom);
+    property Description: string read FDescription write FDescription;
+    property Room: TWorldRoom read FRoom write FRoom;
+  end;
+
+  TWorldObjectList = specialize TObjectList<TWorldObject>;
+
   { TWorld owns the live target-independent model. }
   TWorld = class
   private
     FRooms: TWorldRoomList;
+    FObjects: TWorldObjectList;
   public
     constructor Create;
     destructor Destroy; override;
     function AddRoom(const AID, AName: string): TWorldRoom;
+    function AddObject(const AID, AName: string; ARoom: TWorldRoom): TWorldObject;
     procedure DeleteRoom(ARoom: TWorldRoom);
     property Rooms: TWorldRoomList read FRooms;
+    property Objects: TWorldObjectList read FObjects;
   end;
 
 implementation
@@ -128,14 +146,24 @@ begin
   Result := nil;
 end;
 
+constructor TWorldObject.Create(const AID, AName: string; ARoom: TWorldRoom);
+begin
+  inherited Create(AID, AName);
+  if ARoom = nil then
+    raise EArgumentNilException.Create('ARoom');
+  FRoom := ARoom;
+end;
+
 constructor TWorld.Create;
 begin
   inherited Create;
   FRooms := TWorldRoomList.Create(True);
+  FObjects := TWorldObjectList.Create(True);
 end;
 
 destructor TWorld.Destroy;
 begin
+  FObjects.Free;
   FRooms.Free;
   inherited Destroy;
 end;
@@ -146,6 +174,13 @@ begin
   FRooms.Add(Result);
 end;
 
+function TWorld.AddObject(const AID, AName: string;
+  ARoom: TWorldRoom): TWorldObject;
+begin
+  Result := TWorldObject.Create(AID, AName, ARoom);
+  FObjects.Add(Result);
+end;
+
 procedure TWorld.DeleteRoom(ARoom: TWorldRoom);
 var
   Room: TWorldRoom;
@@ -154,7 +189,13 @@ begin
   if ARoom = nil then
     raise EArgumentNilException.Create('ARoom');
 
-  { Remove all references before the owning room list frees the destination. }
+  { Objects in a deleted room cannot retain a dangling room reference. Stage 1
+    deletes them with the room; later containment semantics may offer choices. }
+  for I := FObjects.Count - 1 downto 0 do
+    if FObjects[I].Room = ARoom then
+      FObjects.Delete(I);
+
+  { Remove all exit references before the owning room list frees destination. }
   for Room in FRooms do
     if Room <> ARoom then
       for I := Room.Exits.Count - 1 downto 0 do
