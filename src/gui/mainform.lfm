@@ -6,6 +6,9 @@ object WorldWrightMainForm: TWorldWrightMainForm
   Caption = 'WorldWright - Build your adventure from the inside.'
   ClientHeight = 700
   ClientWidth = 1100
+  Font.Height = -16
+  Font.Size = 12
+  ParentFont = False
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
