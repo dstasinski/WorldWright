@@ -46,6 +46,18 @@ begin
         Check(Pos('Tall windows', Game.ExecuteCommand('LOOK')) > 0,
           'player LOOK did not see builder description');
 
+        Output := Builder.ExecuteCommand('@connect south Laboratory');
+        Check(World.Rooms[1].ExitTo(wdSouth) = World.Rooms[0],
+          '@CONNECT did not create the requested exit');
+        Check(World.Rooms[0].ExitTo(wdNorth) = World.Rooms[1],
+          '@CONNECT did not create the reverse exit');
+        Check(Pos('Connected', Output) > 0,
+          '@CONNECT did not report success');
+        Check(Pos('Laboratory', Game.ExecuteCommand('SOUTH')) > 0,
+          'player could not traverse builder-created exit');
+        Check(Pos('Observation Deck', Game.ExecuteCommand('NORTH')) > 0,
+          'player could not traverse reverse builder-created exit');
+
         Builder.ExecuteCommand('@room Observation Deck');
         Check(World.Rooms[2].ID = 'observation_deck_2',
           'duplicate generated ID was not made unique');
@@ -57,6 +69,10 @@ begin
         Output := Builder.ExecuteCommand('@describe');
         Check(Pos('Usage:', Output) > 0,
           '@DESCRIBE without text did not report usage');
+
+        Output := Builder.ExecuteCommand('@connect');
+        Check(Pos('Usage:', Output) > 0,
+          '@CONNECT without arguments did not report usage');
 
         WriteLn('PASS: WorldWright builder-session smoke test');
       finally
