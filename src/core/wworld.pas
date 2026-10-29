@@ -24,6 +24,10 @@ type
     these values into their own syntax without changing the live model. }
   TWorldDirection = (wdNorth, wdSouth, wdEast, wdWest);
 
+  { Object resolution explicitly reports ambiguity so callers never select an
+    arbitrary same-named object. Stable-ID matches are always exact. }
+  TObjectResolveStatus = (orsNotFound, orsUnique, orsAmbiguous);
+
   { TWorldEntity is the common identity-bearing base for objects stored in a
     WorldWright project. Stable IDs are deliberately separate from display
     names so authors may rename things without breaking relationships. }
@@ -94,6 +98,8 @@ type
     { Add methods transfer ownership of the returned entity to TWorld. }
     function AddRoom(const AID, AName: string): TWorldRoom;
     function AddObject(const AID, AName: string; ARoom: TWorldRoom): TWorldObject;
+    function ResolveObjectInRoom(ARoom: TWorldRoom; const ANameOrID: string;
+      out AObject: TWorldObject): TObjectResolveStatus;
     { DeleteRoom also removes objects located in ARoom and exits that target
       it, preserving pointer integrity before the room is freed. }
     procedure DeleteRoom(ARoom: TWorldRoom);
@@ -193,6 +199,45 @@ function TWorld.AddObject(const AID, AName: string;
 begin
   Result := TWorldObject.Create(AID, AName, ARoom);
   FObjects.Add(Result);
+end;
+
+function TWorld.ResolveObjectInRoom(ARoom: TWorldRoom;
+  const ANameOrID: string; out AObject: TWorldObject): TObjectResolveStatus;
+var
+  WorldObject: TWorldObject;
+  MatchCount: Integer;
+  ReferenceText: string;
+begin
+  AObject := nil;
+  ReferenceText := Trim(ANameOrID);
+
+  { Stable IDs are project-wide unique and therefore take precedence over
+    display-name matching, even when duplicate names share a room. }
+  for WorldObject in FObjects do
+    if (WorldObject.Room = ARoom) and SameText(WorldObject.ID, ReferenceText) then
+    begin
+      AObject := WorldObject;
+      Exit(orsUnique);
+    end;
+
+  MatchCount := 0;
+  for WorldObject in FObjects do
+    if (WorldObject.Room = ARoom) and SameText(WorldObject.Name, ReferenceText) then
+    begin
+      Inc(MatchCount);
+      if MatchCount = 1 then
+        AObject := WorldObject;
+    end;
+
+  case MatchCount of
+    0: Result := orsNotFound;
+    1: Result := orsUnique;
+  else
+    begin
+      AObject := nil;
+      Result := orsAmbiguous;
+    end;
+  end;
 end;
 
 procedure TWorld.DeleteRoom(ARoom: TWorldRoom);
