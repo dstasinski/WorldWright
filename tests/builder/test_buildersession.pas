@@ -70,6 +70,12 @@ begin
           Game.ExecuteCommand('EXAMINE brass key')) > 0,
           'EXAMINE did not see the builder-authored description');
 
+        Output := Builder.ExecuteCommand('@distinguish brass_key tarnished');
+        Check(World.Objects[0].DistinguishingText = 'tarnished',
+          '@DISTINGUISH did not update distinguishing text');
+        Check(Pos('Distinguishing text updated', Output) > 0,
+          '@DISTINGUISH did not report success');
+
         Output := Builder.ExecuteCommand('@move Laboratory');
         Check(Game.CurrentRoom = World.Rooms[0],
           '@MOVE did not change the current room');
@@ -113,6 +119,10 @@ begin
         Output := Builder.ExecuteCommand('@describeobject');
         Check(Pos('Usage:', Output) > 0,
           '@DESCRIBEOBJECT without arguments did not report usage');
+
+        Output := Builder.ExecuteCommand('@distinguish');
+        Check(Pos('Usage:', Output) > 0,
+          '@DISTINGUISH without arguments did not report usage');
 
         Output := Builder.ExecuteCommand('@describe');
         Check(Pos('Usage:', Output) > 0,
