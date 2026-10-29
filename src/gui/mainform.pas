@@ -48,7 +48,7 @@ begin
   FWorld := TWorld.Create;
   BuildStarterWorld;
   FSession := TGameSession.Create(FWorld);
-  FBuilder := TBuilderSession.Create(FWorld);
+  FBuilder := TBuilderSession.Create(FWorld, FSession);
   RefreshWorldView;
 
   WorkspaceMemo.Clear;
