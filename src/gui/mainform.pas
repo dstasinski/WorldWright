@@ -29,6 +29,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure WorldTreeDblClick(Sender: TObject);
     procedure WorldTreeSelectionChanged(Sender: TObject);
   private
     FWorld: TWorld;
@@ -247,6 +248,23 @@ begin
     InspectorGrid.Cells[0, 4] := 'Description';
     InspectorGrid.Cells[1, 4] := SelectedRoom.Description;
   end;
+end;
+
+procedure TWorldWrightMainForm.WorldTreeDblClick(Sender: TObject);
+var
+  SelectedEntity: TWorldEntity;
+begin
+  { Double-click is author navigation, not player movement. Route it through
+    the existing @MOVE builder command so GUI and command-line authoring share
+    one implementation and do not accidentally acquire traversal semantics. }
+  if (WorldTree.Selected = nil) or (WorldTree.Selected.Data = nil) then
+    Exit;
+
+  SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
+  if not (SelectedEntity is TWorldRoom) then
+    Exit;
+
+  ExecuteInputLine('@MOVE ' + SelectedEntity.ID);
 end;
 
 procedure TWorldWrightMainForm.WorldTreeSelectionChanged(Sender: TObject);
