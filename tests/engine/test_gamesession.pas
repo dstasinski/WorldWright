@@ -26,7 +26,10 @@ begin
     Hallway := World.AddRoom('hallway', 'Hallway');
     Hallway.Description := 'A narrow hallway stretches north and south.';
     with World.AddObject('brass_key', 'brass key', Laboratory) do
+    begin
       Description := 'A small, tarnished brass key.';
+      DistinguishingText := 'tarnished';
+    end;
     Laboratory.Connect(wdNorth, Hallway);
     Hallway.Connect(wdSouth, Laboratory);
 
@@ -63,10 +66,12 @@ begin
       Check(Pos('brass key', Session.ExecuteCommand('look')) > 0,
         'DROP did not return the object to the current room');
 
-      World.AddObject('brass_key_2', 'brass key', Laboratory);
+      with World.AddObject('brass_key_2', 'brass key', Laboratory) do
+        DistinguishingText := 'shiny';
       Output := Session.ExecuteCommand('examine brass key');
       Check((Pos('Which', Output) > 0) and (Pos('1.', Output) > 0) and
-        (Pos('2.', Output) > 0),
+        (Pos('2.', Output) > 0) and (Pos('tarnished brass key', Output) > 0) and
+        (Pos('shiny brass key', Output) > 0),
         'EXAMINE did not offer numbered duplicate-name choices');
       Output := Session.ExecuteCommand('2');
       Check(Pos('nothing special', Output) > 0,
