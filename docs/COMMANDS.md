@@ -57,6 +57,32 @@ X brass key
 If the object has no authored description, WorldWright reports that there is
 nothing special about it.
 
+### TAKE
+
+**Syntax:** `TAKE <object>`  
+**Alias:** `GET <object>`
+
+Moves an unambiguous object from the current room into player inventory. If
+multiple room objects have the requested name, WorldWright reports ambiguity
+and takes nothing.
+
+### DROP
+
+**Syntax:** `DROP <object>`
+
+Moves an unambiguous carried object into the current room. Object resolution is
+limited to player inventory, so a same-named object already lying in the room
+does not interfere. If multiple carried objects have the same name, WorldWright
+reports ambiguity and drops nothing.
+
+### INVENTORY
+
+**Syntax:** `INVENTORY`  
+**Alias:** `I`
+
+Lists objects currently carried by the player. If none are carried, WorldWright
+reports that the player is carrying nothing.
+
 ## Builder commands
 
 Builder commands begin with `@`. They modify the same live world being used by
@@ -172,11 +198,13 @@ WorldWright's object-command behavior follows this rule:
 4. Player commands should eventually offer interactive disambiguation.
 5. Builder commands report ambiguity and allow the author to use the stable ID.
 
-This rule is intended to remain common infrastructure for future commands such
-as `TAKE`, `DROP`, `GIVE`, container interactions, and GUI editing.
+This rule is common infrastructure for `EXAMINE`, `TAKE`, `DROP`, builder
+object editing, and future commands such as `GIVE`, container interactions,
+and GUI editing. TAKE resolves against the current room; DROP resolves against
+player inventory.
 
 ## Planned commands
 
 Commands described elsewhere in the roadmap but not listed above are not yet
-implemented. In particular, `TAKE`, `DROP`, `INVENTORY`, containment,
-doors, locks, NPC interactions, and richer builder commands remain future work.
+implemented. In particular, containment, doors, locks, NPC interactions, and richer builder
+commands remain future work.
