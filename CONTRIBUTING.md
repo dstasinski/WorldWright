@@ -55,3 +55,12 @@ Automated compilation and testing for WorldWright will be performed by GitHub Ac
 - A real CI workflow should be added when the repository contains the initial Lazarus project and meaningful automated tests; no placeholder workflow should consume CI runs before then.
 
 Detailed coding conventions will be added when active development starts.
+
+
+## Command documentation
+
+Player and builder command behavior is documented in `docs/COMMANDS.md`.
+Any change that adds, removes, aliases, or changes the syntax, resolution rules,
+or user-visible behavior of a player command or `@` builder command must update
+that reference in the same development change. Command tests should be updated
+at the same time where practical.
