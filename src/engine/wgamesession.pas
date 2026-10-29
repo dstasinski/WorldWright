@@ -181,9 +181,9 @@ begin
       LocationText := 'carried'
     else
       LocationText := 'here';
-    if Trim(FPendingObjects[I].DistinguishingText) <> '' then
+    if Trim(FPendingObjects[I].Tag) <> '' then
       Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
-        FPendingObjects[I].DistinguishingText + ' ' +
+        FPendingObjects[I].Tag + ' ' +
         FPendingObjects[I].Name + ' (' + LocationText + ')'
     else
       Result := Result + LineEnding + IntToStr(I + 1) + '. ' +
