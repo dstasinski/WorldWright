@@ -1,5 +1,14 @@
 unit WWorld;
 
+{ Core neutral world model.
+
+  This unit deliberately has no GUI, parser, persistence, or exporter
+  dependencies. TWorld owns rooms and objects. Rooms own their exits; exits
+  reference destination rooms without owning them. Object Room references are
+  likewise non-owning. All deletion that can invalidate cross-references
+  therefore belongs on TWorld so callers cannot accidentally leave dangling
+  model pointers. }
+
 {$mode objfpc}{$H+}
 
 interface
@@ -50,6 +59,8 @@ type
   public
     constructor Create(const AID, AName: string);
     destructor Destroy; override;
+    { Connect replaces any existing exit in ADirection. The room owns the
+      resulting TWorldExit; ADestination remains owned by TWorld. }
     procedure Connect(ADirection: TWorldDirection; ADestination: TWorldRoom);
     function ExitTo(ADirection: TWorldDirection): TWorldRoom;
     property Description: string read FDescription write FDescription;
@@ -80,8 +91,11 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    { Add methods transfer ownership of the returned entity to TWorld. }
     function AddRoom(const AID, AName: string): TWorldRoom;
     function AddObject(const AID, AName: string; ARoom: TWorldRoom): TWorldObject;
+    { DeleteRoom also removes objects located in ARoom and exits that target
+      it, preserving pointer integrity before the room is freed. }
     procedure DeleteRoom(ARoom: TWorldRoom);
     property Rooms: TWorldRoomList read FRooms;
     property Objects: TWorldObjectList read FObjects;
