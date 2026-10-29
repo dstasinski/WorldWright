@@ -54,6 +54,15 @@ begin
         Check(Pos('City Observatory', Game.ExecuteCommand('LOOK')) > 0,
           'player LOOK did not see renamed room');
 
+        Output := Builder.ExecuteCommand('@move Laboratory');
+        Check(Game.CurrentRoom = World.Rooms[0],
+          '@MOVE did not change the current room');
+        Check(Pos('Laboratory', Output) > 0,
+          '@MOVE did not report the destination');
+        Output := Builder.ExecuteCommand('@move City Observatory');
+        Check(Game.CurrentRoom = World.Rooms[1],
+          '@MOVE could not find a room by display name');
+
         Output := Builder.ExecuteCommand('@connect south Laboratory');
         Check(World.Rooms[1].ExitTo(wdSouth) = World.Rooms[0],
           '@CONNECT did not create the requested exit');
@@ -85,6 +94,14 @@ begin
         Output := Builder.ExecuteCommand('@rename');
         Check(Pos('Usage:', Output) > 0,
           '@RENAME without a name did not report usage');
+
+        Output := Builder.ExecuteCommand('@move');
+        Check(Pos('Usage:', Output) > 0,
+          '@MOVE without a room did not report usage');
+
+        Output := Builder.ExecuteCommand('@move Missing Room');
+        Check(Pos('not found', Output) > 0,
+          '@MOVE did not report a missing room');
 
         WriteLn('PASS: WorldWright builder-session smoke test');
       finally
