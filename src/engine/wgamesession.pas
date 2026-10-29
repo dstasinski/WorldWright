@@ -92,7 +92,7 @@ var
   WorldObject: TWorldObject;
   ResolveStatus: TObjectResolveStatus;
 begin
-  ResolveStatus := FWorld.ResolveObjectInRoom(FCurrentRoom, ANounPhrase,
+  ResolveStatus := FWorld.ResolveVisibleObject(FCurrentRoom, ANounPhrase,
     WorldObject);
   case ResolveStatus of
     orsAmbiguous:
