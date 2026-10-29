@@ -98,10 +98,24 @@ end;
   in the tree or grid. }
 procedure TWorldWrightMainForm.RefreshWorldView;
 var
-  WorldNode, RoomNode, InventoryNode: TTreeNode;
+  WorldNode, RoomNode, InventoryNode, NewNode, SelectedNode: TTreeNode;
   Room: TWorldRoom;
   WorldObject: TWorldObject;
+  SelectedID: string;
+  SelectInventory: Boolean;
 begin
+  { Preserve logical selection before destroying the old nodes. Entity IDs are
+    stable across a refresh and remain valid when TAKE/DROP changes a parent. }
+  SelectedID := '';
+  SelectInventory := False;
+  if WorldTree.Selected <> nil then
+  begin
+    if WorldTree.Selected.Data <> nil then
+      SelectedID := TWorldEntity(WorldTree.Selected.Data).ID
+    else
+      SelectInventory := SameText(WorldTree.Selected.Text, 'Inventory');
+  end;
+
   WorldTree.Items.Clear;
   WorldNode := WorldTree.Items.Add(nil, 'World');
 
@@ -116,23 +130,48 @@ begin
     for WorldObject in FWorld.Objects do
       if (WorldObject.LocationKind = olRoom) and
         (WorldObject.Room = Room) then
-        with WorldTree.Items.AddChild(RoomNode, WorldObject.Name) do
-          Data := WorldObject;
+        begin
+          NewNode := WorldTree.Items.AddChild(RoomNode, WorldObject.Name);
+          NewNode.Data := WorldObject;
+        end;
     RoomNode.Expand(True);
   end;
 
   InventoryNode := WorldTree.Items.AddChild(WorldNode, 'Inventory');
   for WorldObject in FWorld.Objects do
     if WorldObject.LocationKind = olPlayerInventory then
-      with WorldTree.Items.AddChild(InventoryNode, WorldObject.Name) do
-        Data := WorldObject;
+      begin
+        NewNode := WorldTree.Items.AddChild(InventoryNode, WorldObject.Name);
+        NewNode.Data := WorldObject;
+      end;
   InventoryNode.Expand(True);
 
   WorldNode.Expand(True);
 
-  { Rebuilding invalidates TTreeNode instances, so selection is intentionally
-    not treated as durable model state. With no explicit selection, the
-    inspector continues to describe the current room. }
+  { Restore selection by model identity, never by the destroyed TTreeNode.
+    This also follows an object when its displayed parent changes between a
+    room and Inventory. Structural Inventory selection is restored separately. }
+  SelectedNode := nil;
+  if SelectedID <> '' then
+  begin
+    NewNode := WorldTree.Items.GetFirstNode;
+    while NewNode <> nil do
+    begin
+      if (NewNode.Data <> nil) and
+        SameText(TWorldEntity(NewNode.Data).ID, SelectedID) then
+      begin
+        SelectedNode := NewNode;
+        Break;
+      end;
+      NewNode := NewNode.GetNext;
+    end;
+  end
+  else if SelectInventory then
+    SelectedNode := InventoryNode;
+
+  if SelectedNode <> nil then
+    WorldTree.Selected := SelectedNode;
+
   RefreshInspector;
 end;
 
