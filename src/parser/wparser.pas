@@ -14,7 +14,8 @@ uses
   SysUtils, WWorld;
 
 type
-  TPlayerCommandKind = (pcUnknown, pcLook, pcMove, pcExamine);
+  TPlayerCommandKind = (pcUnknown, pcLook, pcMove, pcExamine, pcTake, pcDrop,
+    pcInventory);
 
   { TParsedPlayerCommand is a small target-independent parser result. The
     parser recognizes intent; the engine decides what that intent does. }
@@ -61,6 +62,23 @@ begin
   begin
     Result.Kind := pcMove;
     Result.Direction := wdWest;
+  end
+  else if (Command = 'INVENTORY') or (Command = 'I') then
+    Result.Kind := pcInventory
+  else if Pos('TAKE ', Command) = 1 then
+  begin
+    Result.Kind := pcTake;
+    Result.NounPhrase := Trim(Copy(AInput, 6, MaxInt));
+  end
+  else if Pos('GET ', Command) = 1 then
+  begin
+    Result.Kind := pcTake;
+    Result.NounPhrase := Trim(Copy(AInput, 5, MaxInt));
+  end
+  else if Pos('DROP ', Command) = 1 then
+  begin
+    Result.Kind := pcDrop;
+    Result.NounPhrase := Trim(Copy(AInput, 6, MaxInt));
   end
   else if Pos('EXAMINE ', Command) = 1 then
   begin
