@@ -65,12 +65,19 @@ begin
 
       World.AddObject('brass_key_2', 'brass key', Laboratory);
       Output := Session.ExecuteCommand('examine brass key');
-      Check(Pos('Which', Output) > 0,
-        'EXAMINE did not ask for clarification on duplicate names');
+      Check((Pos('Which', Output) > 0) and (Pos('1.', Output) > 0) and
+        (Pos('2.', Output) > 0),
+        'EXAMINE did not offer numbered duplicate-name choices');
+      Output := Session.ExecuteCommand('2');
+      Check(Pos('nothing special', Output) > 0,
+        'numbered EXAMINE choice did not examine the selected object');
 
       Output := Session.ExecuteCommand('take brass key');
       Check(Pos('Which', Output) > 0,
         'TAKE did not report duplicate-name ambiguity');
+      Output := Session.ExecuteCommand('1');
+      Check(Pos('Taken', Output) > 0,
+        'numbered TAKE choice did not take the selected object');
 
       Output := Session.ExecuteCommand('x missing thing');
       Check(Pos('do not see', Output) > 0,
