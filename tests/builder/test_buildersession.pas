@@ -54,6 +54,13 @@ begin
         Check(Pos('City Observatory', Game.ExecuteCommand('LOOK')) > 0,
           'player LOOK did not see renamed room');
 
+        Output := Builder.ExecuteCommand('@object brass key');
+        Check(World.Objects.Count = 1, '@OBJECT did not create an object');
+        Check(World.Objects[0].Room = Game.CurrentRoom,
+          '@OBJECT did not place the object in the current room');
+        Check(Pos('brass key', Game.ExecuteCommand('LOOK')) > 0,
+          'LOOK did not show the builder-created object');
+
         Output := Builder.ExecuteCommand('@move Laboratory');
         Check(Game.CurrentRoom = World.Rooms[0],
           '@MOVE did not change the current room');
@@ -89,6 +96,10 @@ begin
         Output := Builder.ExecuteCommand('@room');
         Check(Pos('Usage:', Output) > 0,
           '@ROOM without a name did not report usage');
+
+        Output := Builder.ExecuteCommand('@object');
+        Check(Pos('Usage:', Output) > 0,
+          '@OBJECT without a name did not report usage');
 
         Output := Builder.ExecuteCommand('@describe');
         Check(Pos('Usage:', Output) > 0,
