@@ -57,7 +57,30 @@ begin
     Check((ResolveStatus = orsUnique) and (ResolvedObject = OtherKey),
       'stable object ID did not resolve the exact duplicate-named object');
 
+    { LocationKind is authoritative: inventory has no room reference, and
+      moving back to a room restores both parts of the location invariant. }
     BrassKey.MoveToPlayerInventory;
+    Check(BrassKey.LocationKind = olPlayerInventory,
+      'moving object to inventory did not change location kind');
+    Check(BrassKey.Room = nil,
+      'inventory object retained a stale room reference');
+
+    ResolveStatus := World.ResolveObjectInInventory('tarnished brass key',
+      ResolvedObject);
+    Check((ResolveStatus = orsUnique) and (ResolvedObject = BrassKey),
+      'inventory lookup did not resolve an exact tag phrase');
+    ResolveStatus := World.ResolveObjectInInventory('brass_key',
+      ResolvedObject);
+    Check((ResolveStatus = orsUnique) and (ResolvedObject = BrassKey),
+      'inventory lookup did not honor an exact stable ID');
+
+    OtherKey.MoveToPlayerInventory;
+    ResolveStatus := World.ResolveObjectInInventory('brass key',
+      ResolvedObject);
+    Check((ResolveStatus = orsAmbiguous) and (ResolvedObject = nil),
+      'duplicate carried names were not reported as ambiguous');
+    OtherKey.MoveToRoom(Laboratory);
+
     ResolveStatus := World.ResolveVisibleObject(Laboratory, 'brass key',
       ResolvedObject);
     Check(ResolveStatus = orsAmbiguous,
@@ -67,6 +90,11 @@ begin
     Check((ResolveStatus = orsUnique) and (ResolvedObject = BrassKey),
       'visible lookup did not honor an exact stable ID');
     BrassKey.MoveToRoom(Laboratory);
+    Check(BrassKey.LocationKind = olRoom,
+      'moving object back to room did not restore room location kind');
+    Check(BrassKey.Room = Laboratory,
+      'moving object back to room did not restore room reference');
+
     Check(Laboratory.ID = 'laboratory', 'stable room ID changed');
     Check(Laboratory.Name = 'Laboratory', 'room name was not retained');
     Check(Laboratory.Description <> '', 'room description was not retained');
@@ -87,8 +115,17 @@ begin
       'replacing an exit left a duplicate direction');
 
     Hallway.Connect(wdEast, ObservationDeck);
+
+    { A carried object is not structurally owned by its former room. Deleting
+      that room must therefore preserve the object and its inventory state. }
+    BrassKey.MoveToRoom(ObservationDeck);
+    BrassKey.MoveToPlayerInventory;
     World.DeleteRoom(ObservationDeck);
     Check(World.Rooms.Count = 2, 'room deletion did not update room count');
+    Check(World.FindObjectByID('brass_key') = BrassKey,
+      'room deletion incorrectly deleted a carried object');
+    Check((BrassKey.LocationKind = olPlayerInventory) and (BrassKey.Room = nil),
+      'room deletion corrupted carried object location state');
     Check(Laboratory.ExitTo(wdNorth) = nil,
       'room deletion left a dangling north exit');
     Check(Hallway.ExitTo(wdEast) = nil,
