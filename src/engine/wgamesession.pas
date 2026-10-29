@@ -5,7 +5,7 @@ unit WGameSession;
 interface
 
 uses
-  Classes, SysUtils, WWorld;
+  Classes, SysUtils, WWorld, WParser;
 
 type
   { TGameSession owns transient play state for a live world. }
@@ -60,25 +60,20 @@ end;
 
 function TGameSession.ExecuteCommand(const ACommand: string): string;
 var
-  Command: string;
+  Parsed: TParsedPlayerCommand;
 begin
-  Command := UpperCase(Trim(ACommand));
-
-  if Command = '' then
+  if Trim(ACommand) = '' then
     Exit('');
 
-  if (Command = 'LOOK') or (Command = 'L') then
-    Exit(DescribeCurrentRoom);
-  if (Command = 'NORTH') or (Command = 'N') then
-    Exit(Move(wdNorth));
-  if (Command = 'SOUTH') or (Command = 'S') then
-    Exit(Move(wdSouth));
-  if (Command = 'EAST') or (Command = 'E') then
-    Exit(Move(wdEast));
-  if (Command = 'WEST') or (Command = 'W') then
-    Exit(Move(wdWest));
-
-  Result := 'I do not understand "' + Trim(ACommand) + '".';
+  Parsed := ParsePlayerCommand(ACommand);
+  case Parsed.Kind of
+    pcLook:
+      Result := DescribeCurrentRoom;
+    pcMove:
+      Result := Move(Parsed.Direction);
+  else
+    Result := 'I do not understand "' + Trim(ACommand) + '".';
+  end;
 end;
 
 end.
