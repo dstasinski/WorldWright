@@ -20,6 +20,7 @@ type
     function DescribeRoom(const ADescription: string): string;
     function RenameRoom(const AName: string): string;
     function MoveToRoom(const ARoom: string): string;
+    function DeleteCurrentRoom: string;
     function ConnectRoom(const AArguments: string): string;
     function FindRoom(const ANameOrID: string): TWorldRoom;
     function ParseDirection(const AText: string; out ADirection,
@@ -150,6 +151,30 @@ begin
   Result := 'Moved builder location to "' + Target.Name + '".';
 end;
 
+
+function TBuilderSession.DeleteCurrentRoom: string;
+var
+  RoomToDelete, NextRoom: TWorldRoom;
+  OldName: string;
+begin
+  RoomToDelete := FGameSession.CurrentRoom;
+  if RoomToDelete = nil then
+    Exit('There is no current room to delete.');
+  if FWorld.Rooms.Count <= 1 then
+    Exit('The last room in the world cannot be deleted.');
+
+  if FWorld.Rooms[0] <> RoomToDelete then
+    NextRoom := FWorld.Rooms[0]
+  else
+    NextRoom := FWorld.Rooms[1];
+
+  OldName := RoomToDelete.Name;
+  FGameSession.CurrentRoom := NextRoom;
+  FWorld.DeleteRoom(RoomToDelete);
+  Result := 'Deleted room "' + OldName + '". Current room is "' +
+    NextRoom.Name + '".';
+end;
+
 function TBuilderSession.FindRoom(const ANameOrID: string): TWorldRoom;
 var
   Room: TWorldRoom;
@@ -249,6 +274,8 @@ begin
     Exit(RenameRoom(Argument));
   if SameText(Command, '@MOVE') then
     Exit(MoveToRoom(Argument));
+  if SameText(Command, '@DELETE') then
+    Exit(DeleteCurrentRoom);
   if SameText(Command, '@CONNECT') then
     Exit(ConnectRoom(Argument));
 
