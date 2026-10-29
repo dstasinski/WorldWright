@@ -193,9 +193,11 @@ A later ambiguous player command can then present choices such as
 been authored, the prompt falls back to temporary numbered labels such as
 `brass key #1` and `brass key #2`.
 
-Distinguishing text is currently presentation metadata for disambiguation. It
-does not yet add parser vocabulary; for example, `TAKE tarnished brass key`
-will be added when adjective/vocabulary matching is implemented deliberately.
+Distinguishing text also provides an exact alternate player reference. For
+example, if a `brass key` has distinguishing text `tarnished`, the player may
+use `TAKE tarnished brass key`, `EXAMINE tarnished brass key`, or, while
+carrying it, `DROP tarnished brass key`. This is deliberately exact phrase
+matching, not fuzzy or partial adjective matching.
 
 ### @DESCRIBEOBJECT
 
@@ -219,16 +221,18 @@ Example:
 WorldWright's object-command behavior follows this rule:
 
 1. A stable ID identifies exactly one object.
-2. A display name may identify an object when exactly one matching candidate is
+2. An exact `distinguishing text + display name` phrase identifies a matching
+   object in the command's applicable scope.
+3. A display name may identify an object when exactly one matching candidate is
    in the command's applicable scope.
-3. Multiple matching names are ambiguous; commands must never silently choose
+4. Multiple matching names are ambiguous; commands must never silently choose
    the first match.
-4. For player object commands, WorldWright lists numbered matching candidates.
+5. For player object commands, WorldWright lists numbered matching candidates.
    Authored distinguishing text is shown when available; otherwise temporary
    `name #N` labels are used. WorldWright remembers the pending action. Entering a listed number applies the
    original command to that exact object. Entering another command cancels the
    pending choice and executes the new command normally.
-5. Builder commands report ambiguity and allow the author to use the stable ID.
+6. Builder commands report ambiguity and allow the author to use the stable ID.
    Stable IDs are not intended to be required knowledge for ordinary players.
 
 This rule is common infrastructure for `EXAMINE`, `TAKE`, `DROP`, builder
