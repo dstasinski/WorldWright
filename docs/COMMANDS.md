@@ -176,28 +176,29 @@ Example:
 
 **Syntax:** `@TAG <object> <tag>`
 
-Sets a short tag for an object that may share its display name
-with other objects. The object reference follows the same current-room rules as
+Sets the complete player-facing tag phrase for an object. The tag is independent
+of the object's authoring name and stable ID, and is not automatically combined
+with the object name. The object reference follows the same current-room rules as
 `@DESCRIBEOBJECT`; use the stable ID when duplicate names make the reference
 ambiguous.
 
 Example:
 
 ```text
-@TAG brass_key tarnished
-@TAG brass_key_2 shiny
+@TAG brass_key a little brass key
+@TAG brass_key_2 a shiny brass key
 ```
 
-A later ambiguous player command can then present choices such as
-`tarnished brass key` and `shiny brass key`. If tag has not
-been authored, the prompt falls back to temporary numbered labels such as
+A later ambiguous player command can then present the authored phrases directly,
+such as `a little brass key` and `a shiny brass key`. If a tag has not been
+authored, the prompt falls back to temporary numbered labels such as
 `brass key #1` and `brass key #2`.
 
-Tag also provides an exact alternate player reference. For
-example, if a `brass key` has tag `tarnished`, the player may
-use `TAKE tarnished brass key`, `EXAMINE tarnished brass key`, or, while
-carrying it, `DROP tarnished brass key`. This is deliberately exact phrase
-matching, not fuzzy or partial adjective matching.
+Tag also provides an exact alternate player reference. For example, an object
+whose authoring name is `brass_key` may have the complete tag `a little brass
+key`; the player may then use `TAKE a little brass key`, `EXAMINE a little
+brass key`, or, while carrying it, `DROP a little brass key`. This is exact
+phrase matching, not fuzzy or partial matching.
 
 ### @DESCRIBEOBJECT
 
@@ -221,8 +222,8 @@ Example:
 WorldWright's object-command behavior follows this rule:
 
 1. A stable ID identifies exactly one object.
-2. An exact `tag + display name` phrase identifies a matching
-   object in the command's applicable scope.
+2. An exact authored tag phrase identifies a matching object in the command's
+   applicable scope. Tag is a complete phrase and is not combined with Name.
 3. A display name may identify an object when exactly one matching candidate is
    in the command's applicable scope.
 4. Multiple matching names are ambiguous; commands must never silently choose
