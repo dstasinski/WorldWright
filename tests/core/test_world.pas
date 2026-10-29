@@ -8,7 +8,8 @@ uses
 var
   World: TWorld;
   Laboratory, Hallway, ObservationDeck: TWorldRoom;
-  BrassKey: TWorldObject;
+  BrassKey, OtherKey, ResolvedObject: TWorldObject;
+  ResolveStatus: TObjectResolveStatus;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
 begin
@@ -35,6 +36,19 @@ begin
     Check(BrassKey.ID = 'brass_key', 'stable object ID changed');
     Check(BrassKey.Room = Laboratory, 'object room was not retained');
     Check(BrassKey.Description <> '', 'object description was not retained');
+
+    OtherKey := World.AddObject('brass_key_2', 'brass key', Laboratory);
+    ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'brass key',
+      ResolvedObject);
+    Check(ResolveStatus = orsAmbiguous,
+      'duplicate object names were not reported as ambiguous');
+    Check(ResolvedObject = nil,
+      'ambiguous object lookup returned an arbitrary object');
+
+    ResolveStatus := World.ResolveObjectInRoom(Laboratory, 'brass_key_2',
+      ResolvedObject);
+    Check((ResolveStatus = orsUnique) and (ResolvedObject = OtherKey),
+      'stable object ID did not resolve the exact duplicate-named object');
     Check(Laboratory.ID = 'laboratory', 'stable room ID changed');
     Check(Laboratory.Name = 'Laboratory', 'room name was not retained');
     Check(Laboratory.Description <> '', 'room description was not retained');
