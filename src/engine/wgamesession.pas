@@ -86,16 +86,20 @@ end;
 function TGameSession.Examine(const ANounPhrase: string): string;
 var
   WorldObject: TWorldObject;
+  ResolveStatus: TObjectResolveStatus;
 begin
-  for WorldObject in FWorld.Objects do
-    if (WorldObject.Room = FCurrentRoom) and
-      SameText(WorldObject.Name, Trim(ANounPhrase)) then
-    begin
-      if Trim(WorldObject.Description) <> '' then
-        Exit(WorldObject.Description);
-      Exit('You see nothing special about the ' + WorldObject.Name + '.');
-    end;
-  Result := 'You do not see "' + Trim(ANounPhrase) + '" here.';
+  ResolveStatus := FWorld.ResolveObjectInRoom(FCurrentRoom, ANounPhrase,
+    WorldObject);
+  case ResolveStatus of
+    orsAmbiguous:
+      Exit('Which "' + Trim(ANounPhrase) + '" do you mean?');
+    orsNotFound:
+      Exit('You do not see "' + Trim(ANounPhrase) + '" here.');
+  end;
+
+  if Trim(WorldObject.Description) <> '' then
+    Exit(WorldObject.Description);
+  Result := 'You see nothing special about the ' + WorldObject.Name + '.';
 end;
 
 function TGameSession.ExecuteCommand(const ACommand: string): string;
