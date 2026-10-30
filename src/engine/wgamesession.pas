@@ -11,9 +11,26 @@ unit WGameSession;
 interface
 
 uses
-  Classes, SysUtils, WWorld, WParser;
+  Classes, SysUtils, Generics.Collections, WWorld, WParser;
 
 type
+  { Runtime location for one world object. The object itself remains an
+    authored definition owned by TWorld; this record-like object is owned by
+    TGameSession and may be discarded at any time. }
+  TGameObjectState = class
+  private
+    FWorldObject: TWorldObject;
+    FRoom: TWorldRoom;
+    FCarried: Boolean;
+  public
+    constructor Create(AWorldObject: TWorldObject);
+    property WorldObject: TWorldObject read FWorldObject;
+    property Room: TWorldRoom read FRoom write FRoom;
+    property Carried: Boolean read FCarried write FCarried;
+  end;
+
+  TGameObjectStateList = specialize TObjectList<TGameObjectState>;
+
   { TGameSession owns transient play state for a live world. }
   TGameSession = class
   private
@@ -21,6 +38,15 @@ type
     FCurrentRoom: TWorldRoom;
     FPendingKind: TPlayerCommandKind;
     FPendingObjectIDs: TStringList;
+    FObjectStates: TGameObjectStateList;
+    function ObjectState(AObject: TWorldObject): TGameObjectState;
+    function ObjectIsInRoom(AObject: TWorldObject; ARoom: TWorldRoom): Boolean;
+    function ResolveObjectInRoom(ARoom: TWorldRoom; const ANameOrID: string;
+      out AObject: TWorldObject): TObjectResolveStatus;
+    function ResolveObjectInInventory(const ANameOrID: string;
+      out AObject: TWorldObject): TObjectResolveStatus;
+    function ResolveVisibleObject(ARoom: TWorldRoom; const ANameOrID: string;
+      out AObject: TWorldObject): TObjectResolveStatus;
     function DescribeCurrentRoom: string;
     function Move(ADirection: TWorldDirection): string;
     function Examine(const ANounPhrase: string): string;
@@ -37,6 +63,9 @@ type
     constructor Create(AWorld: TWorld);
     destructor Destroy; override;
     function ExecuteCommand(const ACommand: string): string;
+    function IsObjectCarried(AObject: TWorldObject): Boolean;
+    function RuntimeObjectRoom(AObject: TWorldObject): TWorldRoom;
+    procedure Reset;
     { CurrentRoom is intentionally writable so builder operations can move the
       shared live session without duplicating player-location state. }
     property CurrentRoom: TWorldRoom read FCurrentRoom write FCurrentRoom;
@@ -44,14 +73,27 @@ type
 
 implementation
 
+constructor TGameObjectState.Create(AWorldObject: TWorldObject);
+begin
+  inherited Create;
+  if AWorldObject = nil then
+    raise EArgumentNilException.Create('AWorldObject');
+  FWorldObject := AWorldObject;
+  { WorldObject.Room is authored initial state. Runtime changes never write it. }
+  FRoom := AWorldObject.Room;
+  FCarried := AIsObjectCarried(WorldObject);
+  if FCarried then
+    FRoom := nil;
+end;
+
 constructor TGameSession.Create(AWorld: TWorld);
 begin
   inherited Create;
   if AWorld = nil then
     raise EArgumentNilException.Create('AWorld');
   FWorld := AWorld;
-  if FWorld.Rooms.Count > 0 then
-    FCurrentRoom := FWorld.Rooms[0];
+  FObjectStates := TGameObjectStateList.Create(True);
+  Reset;
   { Pending choices retain stable IDs rather than world-owned object pointers.
     Builder mutations can therefore never leave this transient state dangling. }
   FPendingObjectIDs := TStringList.Create;
@@ -61,7 +103,147 @@ end;
 destructor TGameSession.Destroy;
 begin
   FPendingObjectIDs.Free;
+  FObjectStates.Free;
   inherited Destroy;
+end;
+
+function TGameSession.ObjectState(AObject: TWorldObject): TGameObjectState;
+var
+  State: TGameObjectState;
+begin
+  for State in FObjectStates do
+    if State.WorldObject = AObject then
+      Exit(State);
+  { Builder-created objects become immediately testable without resetting. Their
+    first runtime state is copied from their authored initial location. }
+  Result := TGameObjectState.Create(AObject);
+  FObjectStates.Add(Result);
+end;
+
+function TGameSession.ObjectIsInRoom(AObject: TWorldObject;
+  ARoom: TWorldRoom): Boolean;
+var
+  State: TGameObjectState;
+begin
+  State := ObjectState(AObject);
+  Result := (not State.Carried) and (State.Room = ARoom);
+end;
+
+function TGameSession.IsObjectCarried(AObject: TWorldObject): Boolean;
+begin
+  Result := ObjectState(AObject).Carried;
+end;
+
+function TGameSession.RuntimeObjectRoom(AObject: TWorldObject): TWorldRoom;
+var
+  State: TGameObjectState;
+begin
+  State := ObjectState(AObject);
+  if State.Carried then
+    Result := nil
+  else
+    Result := State.Room;
+end;
+
+procedure TGameSession.Reset;
+var
+  WorldObject: TWorldObject;
+begin
+  FObjectStates.Clear;
+  for WorldObject in FWorld.Objects do
+    FObjectStates.Add(TGameObjectState.Create(WorldObject));
+  if FWorld.Rooms.Count > 0 then
+    FCurrentRoom := FWorld.Rooms[0]
+  else
+    FCurrentRoom := nil;
+  if FPendingObjectIDs <> nil then
+    ClearPendingChoice;
+end;
+
+function TGameSession.ResolveObjectInRoom(ARoom: TWorldRoom;
+  const ANameOrID: string; out AObject: TWorldObject): TObjectResolveStatus;
+var
+  WorldObject: TWorldObject;
+  MatchCount: Integer;
+  Ref: string;
+begin
+  AObject := nil;
+  Ref := Trim(ANameOrID);
+  for WorldObject in FWorld.Objects do
+    if ObjectIsInRoom(WorldObject, ARoom) and SameText(WorldObject.ID, Ref) then
+    begin AObject := WorldObject; Exit(orsUnique); end;
+  MatchCount := 0;
+  for WorldObject in FWorld.Objects do
+    if ObjectIsInRoom(WorldObject, ARoom) and (Trim(WorldObject.Tag) <> '') and
+      SameText(WorldObject.Tag, Ref) then
+    begin Inc(MatchCount); if MatchCount = 1 then AObject := WorldObject; end;
+  if MatchCount = 1 then Exit(orsUnique);
+  if MatchCount > 1 then begin AObject := nil; Exit(orsAmbiguous); end;
+  MatchCount := 0;
+  for WorldObject in FWorld.Objects do
+    if ObjectIsInRoom(WorldObject, ARoom) and SameText(WorldObject.Name, Ref) then
+    begin Inc(MatchCount); if MatchCount = 1 then AObject := WorldObject; end;
+  if MatchCount = 0 then Result := orsNotFound
+  else if MatchCount = 1 then Result := orsUnique
+  else begin AObject := nil; Result := orsAmbiguous; end;
+end;
+
+function TGameSession.ResolveObjectInInventory(const ANameOrID: string;
+  out AObject: TWorldObject): TObjectResolveStatus;
+var
+  WorldObject: TWorldObject;
+  MatchCount: Integer;
+  Ref: string;
+begin
+  AObject := nil;
+  Ref := Trim(ANameOrID);
+  for WorldObject in FWorld.Objects do
+    if IsObjectCarried(WorldObject) and SameText(WorldObject.ID, Ref) then
+    begin AObject := WorldObject; Exit(orsUnique); end;
+  MatchCount := 0;
+  for WorldObject in FWorld.Objects do
+    if IsObjectCarried(WorldObject) and (Trim(WorldObject.Tag) <> '') and
+      SameText(WorldObject.Tag, Ref) then
+    begin Inc(MatchCount); if MatchCount = 1 then AObject := WorldObject; end;
+  if MatchCount = 1 then Exit(orsUnique);
+  if MatchCount > 1 then begin AObject := nil; Exit(orsAmbiguous); end;
+  MatchCount := 0;
+  for WorldObject in FWorld.Objects do
+    if IsObjectCarried(WorldObject) and SameText(WorldObject.Name, Ref) then
+    begin Inc(MatchCount); if MatchCount = 1 then AObject := WorldObject; end;
+  if MatchCount = 0 then Result := orsNotFound
+  else if MatchCount = 1 then Result := orsUnique
+  else begin AObject := nil; Result := orsAmbiguous; end;
+end;
+
+function TGameSession.ResolveVisibleObject(ARoom: TWorldRoom;
+  const ANameOrID: string; out AObject: TWorldObject): TObjectResolveStatus;
+var
+  WorldObject: TWorldObject;
+  MatchCount: Integer;
+  Ref: string;
+begin
+  AObject := nil;
+  Ref := Trim(ANameOrID);
+  for WorldObject in FWorld.Objects do
+    if (IsObjectCarried(WorldObject) or ObjectIsInRoom(WorldObject, ARoom)) and
+      SameText(WorldObject.ID, Ref) then
+    begin AObject := WorldObject; Exit(orsUnique); end;
+  MatchCount := 0;
+  for WorldObject in FWorld.Objects do
+    if (IsObjectCarried(WorldObject) or ObjectIsInRoom(WorldObject, ARoom)) and
+      (Trim(WorldObject.Tag) <> '') and SameText(WorldObject.Tag, Ref) then
+    begin Inc(MatchCount); if MatchCount = 1 then AObject := WorldObject; end;
+  if MatchCount = 1 then Exit(orsUnique);
+  if MatchCount > 1 then begin AObject := nil; Exit(orsAmbiguous); end;
+  MatchCount := 0;
+  for WorldObject in FWorld.Objects do
+    if (IsObjectCarried(WorldObject) or ObjectIsInRoom(WorldObject, ARoom)) and
+      SameText(WorldObject.Name, Ref) then
+    begin Inc(MatchCount); if MatchCount = 1 then AObject := WorldObject; end;
+  if MatchCount = 0 then Result := orsNotFound
+  else if MatchCount = 1 then Result := orsUnique
+  else begin AObject := nil; Result := orsAmbiguous; end;
 end;
 
 procedure TGameSession.ClearPendingChoice;
@@ -86,8 +268,7 @@ begin
     cached on the room, keeping one authoritative location reference. }
   ObjectsText := '';
   for WorldObject in FWorld.Objects do
-    if (WorldObject.LocationKind = olRoom) and
-      (WorldObject.Room = FCurrentRoom) then
+    if ObjectIsInRoom(WorldObject, FCurrentRoom) then
     begin
       if ObjectsText <> '' then
         ObjectsText := ObjectsText + ', ';
@@ -125,7 +306,11 @@ begin
       end;
     pcTake:
       begin
-        AObject.MoveToPlayerInventory;
+        with ObjectState(AObject) do
+        begin
+          Carried := True;
+          Room := nil;
+        end;
         Result := 'Taken.';
       end;
     pcDrop:
@@ -134,7 +319,11 @@ begin
           Result := 'You are nowhere, so there is nowhere to drop it.'
         else
         begin
-          AObject.MoveToRoom(FCurrentRoom);
+          with ObjectState(AObject) do
+          begin
+            Carried := False;
+            Room := FCurrentRoom;
+          end;
           Result := 'Dropped.';
         end;
       end;
@@ -159,16 +348,14 @@ begin
     case AKind of
       pcExamine:
         IsCandidate := SameText(WorldObject.Name, Trim(AName)) and
-          ((WorldObject.LocationKind = olPlayerInventory) or
-           ((WorldObject.LocationKind = olRoom) and
-            (WorldObject.Room = FCurrentRoom)));
+          ((IsObjectCarried(WorldObject)) or
+           (ObjectIsInRoom(WorldObject, FCurrentRoom)));
       pcTake:
         IsCandidate := SameText(WorldObject.Name, Trim(AName)) and
-          (WorldObject.LocationKind = olRoom) and
-          (WorldObject.Room = FCurrentRoom);
+          ObjectIsInRoom(WorldObject, FCurrentRoom);
       pcDrop:
         IsCandidate := SameText(WorldObject.Name, Trim(AName)) and
-          (WorldObject.LocationKind = olPlayerInventory);
+          (IsObjectCarried(WorldObject));
     else
       IsCandidate := False;
     end;
@@ -182,7 +369,7 @@ begin
     WorldObject := FWorld.FindObjectByID(FPendingObjectIDs[I]);
     if WorldObject = nil then
       Continue;
-    if WorldObject.LocationKind = olPlayerInventory then
+    if IsObjectCarried(WorldObject) then
       LocationText := 'carried'
     else
       LocationText := 'here';
@@ -222,7 +409,7 @@ var
   WorldObject: TWorldObject;
   ResolveStatus: TObjectResolveStatus;
 begin
-  ResolveStatus := FWorld.ResolveVisibleObject(FCurrentRoom, ANounPhrase,
+  ResolveStatus := ResolveVisibleObject(FCurrentRoom, ANounPhrase,
     WorldObject);
   case ResolveStatus of
     orsAmbiguous:
@@ -241,7 +428,7 @@ var
   WorldObject: TWorldObject;
   ResolveStatus: TObjectResolveStatus;
 begin
-  ResolveStatus := FWorld.ResolveObjectInRoom(FCurrentRoom, ANounPhrase,
+  ResolveStatus := ResolveObjectInRoom(FCurrentRoom, ANounPhrase,
     WorldObject);
   case ResolveStatus of
     orsAmbiguous:
@@ -250,7 +437,11 @@ begin
       Exit('You do not see "' + Trim(ANounPhrase) + '" here.');
   end;
 
-  WorldObject.MoveToPlayerInventory;
+  with ObjectState(WorldObject) do
+  begin
+    Carried := True;
+    Room := nil;
+  end;
   Result := 'Taken.';
 end;
 
@@ -259,7 +450,7 @@ var
   WorldObject: TWorldObject;
   ResolveStatus: TObjectResolveStatus;
 begin
-  ResolveStatus := FWorld.ResolveObjectInInventory(ANounPhrase, WorldObject);
+  ResolveStatus := ResolveObjectInInventory(ANounPhrase, WorldObject);
   case ResolveStatus of
     orsAmbiguous:
       Exit(BeginDisambiguation(pcDrop, ANounPhrase));
@@ -269,7 +460,11 @@ begin
 
   if FCurrentRoom = nil then
     Exit('You are nowhere, so there is nowhere to drop it.');
-  WorldObject.MoveToRoom(FCurrentRoom);
+  with ObjectState(WorldObject) do
+  begin
+    Carried := False;
+    Room := FCurrentRoom;
+  end;
   Result := 'Dropped.';
 end;
 
@@ -280,7 +475,7 @@ var
 begin
   InventoryText := '';
   for WorldObject in FWorld.Objects do
-    if WorldObject.LocationKind = olPlayerInventory then
+    if IsObjectCarried(WorldObject) then
     begin
       if InventoryText <> '' then
         InventoryText := InventoryText + ', ';
