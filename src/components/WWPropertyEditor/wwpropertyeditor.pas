@@ -38,8 +38,11 @@ type
     property Items[AIndex: Integer]: TWWPropertyItem read GetItem; default;
   end;
 
+  { The host validates proposed edits because only it understands model
+    semantics. Set Accept False to reject the edit and restore the old value. }
   TWWPropertyChangedEvent = procedure(Sender: TObject;
-    AProperty: TWWPropertyItem; const AOldValue, ANewValue: string) of object;
+    AProperty: TWWPropertyItem; const AOldValue, ANewValue: string;
+    var Accept: Boolean) of object;
 
   { TWWPropertyEditor is a reusable Lazarus/Delphi-style property inspector.
     It owns property metadata and presents it through a two-column grid.
@@ -49,15 +52,16 @@ type
     Event-valued rows use wpkEvent as a presentation/editing contract only;
     the component does not know what an event means or what model owns it.
 
-    This first milestone establishes the data/API boundary and read-only
-    rendering. Inline editing is intentionally deferred until the host can
-    validate and commit changes to its model rather than creating UI-only
-    state. }
+    Text rows support controlled inline editing. The host must accept a
+    proposed value through OnPropertyChanged; otherwise the edit is rejected.
+    Read-only and event rows cannot be changed through the text editor. }
   TWWPropertyEditor = class(TCustomControl)
   private
     FGrid: TStringGrid;
     FProperties: TWWPropertyItems;
     FOnPropertyChanged: TWWPropertyChangedEvent;
+    procedure GridValidateEntry(Sender: TObject; ACol, ARow: Integer;
+      const OldValue: string; var NewValue: string);
     procedure SetProperties(AValue: TWWPropertyItems);
     procedure SyncGrid;
   protected
@@ -115,7 +119,8 @@ begin
   FGrid.FixedRows := 1;
   FGrid.RowCount := 1;
   FGrid.Options := [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine,
-    goRangeSelect, goSmoothScroll];
+    goRangeSelect, goSmoothScroll, goEditing];
+  FGrid.OnValidateEntry := @GridValidateEntry;
   FGrid.Cells[0, 0] := 'Property';
   FGrid.Cells[1, 0] := 'Value';
   FGrid.TabStop := True;
@@ -130,6 +135,41 @@ begin
   { FGrid is owned by Self through the LCL component ownership mechanism. }
   FProperties.Free;
   inherited Destroy;
+end;
+
+procedure TWWPropertyEditor.GridValidateEntry(Sender: TObject;
+  ACol, ARow: Integer; const OldValue: string; var NewValue: string);
+var
+  Accept: Boolean;
+  Prop: TWWPropertyItem;
+begin
+  { Only value cells backed by wpkText are editable. TStringGrid supplies one
+    editor for the grid, so validation is the final authority that prevents
+    property names and protected values from becoming UI-only state. }
+  if (ACol <> 1) or (ARow < 1) or (ARow > FProperties.Count) then
+  begin
+    NewValue := OldValue;
+    Exit;
+  end;
+
+  Prop := FProperties[ARow - 1];
+  if Prop.Kind <> wpkText then
+  begin
+    NewValue := OldValue;
+    Exit;
+  end;
+
+  if NewValue = OldValue then
+    Exit;
+
+  { An edit is rejected unless the host explicitly accepts it. This prevents
+    the inspector from ever becoming a second, unsynchronized data model. }
+  Accept := False;
+  if Assigned(FOnPropertyChanged) then
+    FOnPropertyChanged(Self, Prop, OldValue, NewValue, Accept);
+
+  if not Accept then
+    NewValue := OldValue;
 end;
 
 procedure TWWPropertyEditor.SetProperties(AValue: TWWPropertyItems);
