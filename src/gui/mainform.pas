@@ -120,18 +120,22 @@ var
   Room: TWorldRoom;
   WorldObject: TWorldObject;
   SelectedID: string;
-  SelectInventory: Boolean;
+  SelectInventory, SelectWorld: Boolean;
 begin
   { Preserve logical selection before destroying the old nodes. Entity IDs are
     stable across a refresh and remain valid when TAKE/DROP changes a parent. }
   SelectedID := '';
   SelectInventory := False;
+  SelectWorld := False;
   if WorldTree.Selected <> nil then
   begin
     if WorldTree.Selected.Data <> nil then
       SelectedID := TWorldEntity(WorldTree.Selected.Data).ID
     else
+    begin
       SelectInventory := SameText(WorldTree.Selected.Text, 'Inventory');
+      SelectWorld := SameText(WorldTree.Selected.Text, 'World');
+    end;
   end;
 
   WorldTree.Items.Clear;
@@ -168,7 +172,7 @@ begin
 
   { Restore selection by model identity, never by the destroyed TTreeNode.
     This also follows an object when its displayed parent changes between a
-    room and Inventory. Structural Inventory selection is restored separately. }
+    room and Inventory. Structural World and Inventory selections are restored separately. }
   SelectedNode := nil;
   if SelectedID <> '' then
   begin
@@ -185,7 +189,9 @@ begin
     end;
   end
   else if SelectInventory then
-    SelectedNode := InventoryNode;
+    SelectedNode := InventoryNode
+  else if SelectWorld then
+    SelectedNode := WorldNode;
 
   if SelectedNode <> nil then
     WorldTree.Selected := SelectedNode;
@@ -208,8 +214,26 @@ begin
   if (WorldTree.Selected <> nil) and (WorldTree.Selected.Data <> nil) then
     SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
 
-  { Inventory is a structural/session node rather than a TWorldEntity. Give it
-    explicit inspector content instead of falling through to CurrentRoom. }
+  { World and Inventory are structural/session nodes rather than TWorldEntity
+    instances. Give them explicit inspector content instead of falling through
+    to CurrentRoom, which would make selection appear to change meaning. }
+  if (WorldTree.Selected <> nil) and
+    (WorldTree.Selected.Data = nil) and
+    SameText(WorldTree.Selected.Text, 'World') then
+  begin
+    InspectorGrid.RowCount := 5;
+    InspectorGrid.Cells[0, 1] := 'Name';
+    InspectorGrid.Cells[1, 1] := 'World';
+    InspectorGrid.Cells[0, 2] := 'Kind';
+    InspectorGrid.Cells[1, 2] := 'Project World';
+    InspectorGrid.Cells[0, 3] := 'Rooms';
+    InspectorGrid.Cells[1, 3] := IntToStr(FWorld.Rooms.Count);
+    InspectorGrid.Cells[0, 4] := 'Objects';
+    InspectorGrid.Cells[1, 4] := IntToStr(FWorld.Objects.Count);
+    Exit;
+  end;
+
+  { Inventory has no persistent model identity of its own. }
   if (WorldTree.Selected <> nil) and
     (WorldTree.Selected.Data = nil) and
     SameText(WorldTree.Selected.Text, 'Inventory') then
