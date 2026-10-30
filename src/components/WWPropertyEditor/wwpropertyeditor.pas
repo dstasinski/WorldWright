@@ -5,7 +5,7 @@ unit WWPropertyEditor;
 interface
 
 uses
-  Classes, SysUtils, Controls, Grids, ComCtrls;
+  Classes, SysUtils, Controls, Grids, ComCtrls, Graphics;
 
 type
   { TWWPropertyKind identifies the editor semantics of a property independently
@@ -67,6 +67,10 @@ type
     FProperties: TWWPropertyItems;
     FOnPropertyChanged: TWWPropertyChangedEvent;
     procedure ConfigureGrid(AGrid: TStringGrid);
+    function PropertyForGridRow(AGrid: TStringGrid;
+      ARow: Integer): TWWPropertyItem;
+    procedure GridPrepareCanvas(Sender: TObject; ACol, ARow: Integer;
+      AState: TGridDrawState);
     procedure GridValidateEntry(Sender: TObject; ACol, ARow: Integer;
       const OldValue: string; var NewValue: string);
     procedure SetProperties(AValue: TWWPropertyItems);
@@ -172,6 +176,57 @@ begin
   AGrid.Cells[0, 0] := 'Property';
   AGrid.Cells[1, 0] := 'Value';
   AGrid.TabStop := True;
+  AGrid.OnPrepareCanvas := @GridPrepareCanvas;
+end;
+
+function TWWPropertyEditor.PropertyForGridRow(AGrid: TStringGrid;
+  ARow: Integer): TWWPropertyItem;
+var
+  I: Integer;
+  WantedName, WantedValue: string;
+begin
+  Result := nil;
+  if (ARow < 1) or (ARow >= AGrid.RowCount) then
+    Exit;
+
+  WantedName := Trim(AGrid.Cells[0, ARow]);
+  WantedValue := AGrid.Cells[1, ARow];
+  if WantedValue = '' then
+    Exit; { Category rows have no value and never map to metadata. }
+
+  for I := 0 to FProperties.Count - 1 do
+    if (FProperties[I].Kind = wpkEvent) = (AGrid = FEventsGrid) then
+      if SameText(FProperties[I].Name, WantedName) and
+        (FProperties[I].Value = WantedValue) then
+      begin
+        Result := FProperties[I];
+        Exit;
+      end;
+end;
+
+procedure TWWPropertyEditor.GridPrepareCanvas(Sender: TObject;
+  ACol, ARow: Integer; AState: TGridDrawState);
+var
+  Grid: TStringGrid;
+  Prop: TWWPropertyItem;
+begin
+  Grid := TStringGrid(Sender);
+  if ARow = 0 then
+    Exit;
+
+  Prop := PropertyForGridRow(Grid, ARow);
+  if Prop = nil then
+  begin
+    { Category headings are structural rows. Bold text gives the inspector the
+      familiar Object Inspector hierarchy without pretending categories are
+      editable properties. }
+    Grid.Canvas.Font.Style := [fsBold];
+    Grid.Canvas.Brush.Color := clBtnFace;
+    Exit;
+  end;
+
+  if Prop.Kind = wpkReadOnly then
+    Grid.Canvas.Font.Color := clGrayText;
 end;
 
 procedure TWWPropertyEditor.GridValidateEntry(Sender: TObject;
@@ -183,13 +238,18 @@ begin
   { Only value cells backed by wpkText are editable. TStringGrid supplies one
     editor for the grid, so validation is the final authority that prevents
     property names and protected values from becoming UI-only state. }
-  if (ACol <> 1) or (ARow < 1) or (ARow > FProperties.Count) then
+  if ACol <> 1 then
   begin
     NewValue := OldValue;
     Exit;
   end;
 
-  Prop := FProperties[ARow - 1];
+  Prop := PropertyForGridRow(FGrid, ARow);
+  if Prop = nil then
+  begin
+    NewValue := OldValue;
+    Exit;
+  end;
   if Prop.Kind <> wpkText then
   begin
     NewValue := OldValue;
@@ -285,8 +345,9 @@ begin
   end;
 
   { Keep a useful Lazarus-style property/value split while respecting the
-    component's actual width. A later milestone will make the divider user
-    adjustable and persistent. }
+    component's actual width. TStringGrid's column boundary can be dragged by
+    the user; Resize intentionally rebalances it only when the whole inspector
+    changes size. }
   if FGrid.ClientWidth > 80 then
   begin
     FGrid.ColWidths[0] := FGrid.ClientWidth div 2;
