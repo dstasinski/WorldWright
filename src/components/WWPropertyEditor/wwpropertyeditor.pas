@@ -11,7 +11,7 @@ type
   { TWWPropertyKind identifies the editor semantics of a property independently
     of its displayed text. More kinds can be added without coupling this
     component to WorldWright's world model. }
-  TWWPropertyKind = (wpkReadOnly, wpkText);
+  TWWPropertyKind = (wpkReadOnly, wpkText, wpkEvent);
 
   { TWWPropertyItem is one row of property metadata. ID is a stable,
     non-visual key supplied by the host; Name is the author-facing caption.
@@ -45,6 +45,9 @@ type
     It owns property metadata and presents it through a two-column grid.
     Model objects are deliberately unknown to this control: the host populates
     Properties and later receives edits through OnPropertyChanged.
+
+    Event-valued rows use wpkEvent as a presentation/editing contract only;
+    the component does not know what an event means or what model owns it.
 
     This first milestone establishes the data/API boundary and read-only
     rendering. Inline editing is intentionally deferred until the host can
