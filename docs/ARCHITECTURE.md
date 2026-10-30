@@ -4,7 +4,7 @@ This document records the initial architectural direction. It is expected to evo
 
 ## Guiding principles
 
-1. **Build while playing.** Authoring and play-testing operate on the same live world.
+1. **Build while playing.** Authored definitions are immediately visible to play-testing, while player actions mutate only disposable runtime state.
 2. **One world model.** The internal model, not generated Inform/TADS source, is the source of truth.
 3. **Target independence.** Inform 7 and TADS 3 are export targets, not the internal representation.
 4. **Offline first.** Core functionality must never require an Internet connection.
@@ -38,6 +38,35 @@ Target-specific generators. Initial target: Inform 7. Planned later target: TADS
 
 ### AI
 Optional provider-independent assistance layer. Possible future providers include OpenAI, Anthropic, xAI and local/compatible services. Suggestions should be proposals presented to the author, not direct unreviewed mutations of project data.
+
+## Authored state and play-test state
+
+WorldWright strictly separates the project's **authored initial state** from a
+temporary **runtime test state**. The project model is the source of truth for
+what a newly started game contains: initial object locations, initial door and
+container states, initial variable values, NPC starting locations, and similar
+definitions. Player actions such as TAKE, DROP, OPEN, movement, conversations,
+and puzzle solving must never rewrite those authored initial values.
+
+A `TGameSession` creates runtime state from the authored model. Runtime state
+records the player's current location and the current mutable state of objects,
+NPCs, variables, and other stateful systems. Restarting a test discards that
+state and creates a pristine session from the project definitions.
+
+Builder operations and inspector edits modify authored definitions. Ordinary
+player commands modify runtime state. Author navigation may reposition the
+test session for debugging but does not silently rewrite the project's starting
+conditions.
+
+Exporters consume only authored project definitions and initial values. They
+must never serialize a `TGameSession` or infer initial state from the author's
+current test position. Therefore an exported game always starts pristine even
+when the author exports in the middle of a heavily modified play test.
+
+A future explicit **Apply Current Test State to Initial World** operation may
+allow authors to promote selected runtime values into project definitions. Such
+promotion must be deliberate and reviewable; it is never an automatic side
+effect of testing.
 
 ## Events and rules
 
