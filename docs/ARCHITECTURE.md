@@ -39,6 +39,47 @@ Target-specific generators. Initial target: Inform 7. Planned later target: TADS
 ### AI
 Optional provider-independent assistance layer. Possible future providers include OpenAI, Anthropic, xAI and local/compatible services. Suggestions should be proposals presented to the author, not direct unreviewed mutations of project data.
 
+## Events and rules
+
+WorldWright uses a Lazarus/Delphi-inspired event authoring metaphor while keeping
+game semantics target-independent. An event is a semantic hook that references
+a WorldWright rule; it is not a Pascal method and does not contain Inform 7 or
+TADS 3 source code.
+
+Examples include room lifecycle hooks such as `OnEnter` and `OnExit`, and
+object/action hooks such as Take, Drop, Examine, or Use. The authoring UI may
+present these in an Events category similar to the Lazarus/Delphi Object
+Inspector. Activating an event should eventually open the associated Rule
+Editor.
+
+The model must not grow a fixed field for every possible verb. A small,
+well-defined set of lifecycle hooks may be modeled directly where appropriate,
+while action reactions use an extensible action-to-rule relationship. This
+allows built-in and future custom actions without continually changing every
+world entity class.
+
+Rules themselves remain neutral WorldWright data. They should eventually
+represent conditions and effects such as displaying text, changing variables,
+moving entities, or invoking other rules. The WorldWright engine executes those
+semantics directly during author testing. Exporters translate the same semantics
+into the closest correct Inform 7 or TADS 3 constructs.
+
+This preserves the dependency direction:
+
+```text
+Property/Rule Editors
+        |
+        v
+Neutral Events -> Neutral Rules -> WorldWright Engine
+                       |
+                       +---------> Inform 7 Exporter
+                       +---------> TADS 3 Exporter
+```
+
+Target-specific escape hatches may be considered later for semantics that
+cannot be represented neutrally, but they must remain explicit exceptions and
+must never become the primary event representation.
+
 ## Dependency direction
 
 ```text
