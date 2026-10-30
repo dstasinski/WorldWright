@@ -58,7 +58,6 @@ type
     FGrid: TStringGrid;
     FProperties: TWWPropertyItems;
     FOnPropertyChanged: TWWPropertyChangedEvent;
-    procedure PropertiesChanged(Sender: TObject);
     procedure SetProperties(AValue: TWWPropertyItems);
     procedure SyncGrid;
   protected
@@ -108,8 +107,6 @@ constructor TWWPropertyEditor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FProperties := TWWPropertyItems.Create(Self);
-  FProperties.OnChange := @PropertiesChanged;
-
   FGrid := TStringGrid.Create(Self);
   FGrid.Parent := Self;
   FGrid.Align := alClient;
@@ -133,11 +130,6 @@ begin
   { FGrid is owned by Self through the LCL component ownership mechanism. }
   FProperties.Free;
   inherited Destroy;
-end;
-
-procedure TWWPropertyEditor.PropertiesChanged(Sender: TObject);
-begin
-  SyncGrid;
 end;
 
 procedure TWWPropertyEditor.SetProperties(AValue: TWWPropertyItems);
@@ -184,6 +176,7 @@ end;
 procedure TWWPropertyEditor.Clear;
 begin
   FProperties.Clear;
+  SyncGrid;
 end;
 
 function TWWPropertyEditor.AddProperty(const AID, AName, AValue: string;
@@ -194,6 +187,7 @@ begin
   Result.Name := AName;
   Result.Value := AValue;
   Result.Kind := AKind;
+  SyncGrid;
 end;
 
 end.
