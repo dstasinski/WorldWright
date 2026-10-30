@@ -266,12 +266,12 @@ begin
     (WorldTree.Selected.Data = nil) and
     SameText(WorldTree.Selected.Text, 'World') then
   begin
-    PropertyEditor.AddProperty('name', 'Name', 'World');
-    PropertyEditor.AddProperty('kind', 'Kind', 'Project World');
+    PropertyEditor.AddProperty('name', 'Name', 'World', wpkReadOnly, 'Identity');
+    PropertyEditor.AddProperty('kind', 'Kind', 'Project World', wpkReadOnly, 'Identity');
     PropertyEditor.AddProperty('room_count', 'Rooms',
-      IntToStr(FWorld.Rooms.Count));
+      IntToStr(FWorld.Rooms.Count), wpkReadOnly, 'Contents');
     PropertyEditor.AddProperty('object_count', 'Objects',
-      IntToStr(FWorld.Objects.Count));
+      IntToStr(FWorld.Objects.Count), wpkReadOnly, 'Contents');
     Exit;
   end;
 
@@ -279,20 +279,20 @@ begin
     (WorldTree.Selected.Data = nil) and
     SameText(WorldTree.Selected.Text, 'Inventory') then
   begin
-    PropertyEditor.AddProperty('name', 'Name', 'Inventory');
-    PropertyEditor.AddProperty('kind', 'Kind', 'Player Inventory');
+    PropertyEditor.AddProperty('name', 'Name', 'Inventory', wpkReadOnly, 'Identity');
+    PropertyEditor.AddProperty('kind', 'Kind', 'Player Inventory', wpkReadOnly, 'Identity');
     Exit;
   end;
 
   if SelectedEntity is TWorldObject then
   begin
     SelectedObject := TWorldObject(SelectedEntity);
-    PropertyEditor.AddProperty('name', 'Name', SelectedObject.Name, wpkText);
-    PropertyEditor.AddProperty('id', 'ID', SelectedObject.ID);
-    PropertyEditor.AddProperty('kind', 'Kind', 'Object');
-    PropertyEditor.AddProperty('tag', 'Tag', SelectedObject.Tag, wpkText);
+    PropertyEditor.AddProperty('name', 'Name', SelectedObject.Name, wpkText, 'Identity');
+    PropertyEditor.AddProperty('id', 'ID', SelectedObject.ID, wpkReadOnly, 'Identity');
+    PropertyEditor.AddProperty('kind', 'Kind', 'Object', wpkReadOnly, 'Identity');
+    PropertyEditor.AddProperty('tag', 'Tag', SelectedObject.Tag, wpkText, 'Appearance');
     PropertyEditor.AddProperty('description', 'Description',
-      SelectedObject.Description, wpkText);
+      SelectedObject.Description, wpkText, 'Appearance');
 
     { Show both authored and runtime location explicitly. The authored initial
       value is what persistence/export uses; the runtime value is disposable
@@ -302,7 +302,7 @@ begin
     else
       LocationText := '';
     PropertyEditor.AddProperty('initial_location', 'Initial Location',
-      LocationText);
+      LocationText, wpkReadOnly, 'Location');
 
     if FSession.IsObjectCarried(SelectedObject) then
       LocationText := 'Inventory'
@@ -311,7 +311,7 @@ begin
     else
       LocationText := '';
     PropertyEditor.AddProperty('runtime_location', 'Test Location',
-      LocationText);
+      LocationText, wpkReadOnly, 'Location');
     Exit;
   end;
 
@@ -321,11 +321,11 @@ begin
     Exit;
 
   SelectedRoom := TWorldRoom(SelectedEntity);
-  PropertyEditor.AddProperty('name', 'Name', SelectedRoom.Name, wpkText);
-  PropertyEditor.AddProperty('id', 'ID', SelectedRoom.ID);
-  PropertyEditor.AddProperty('kind', 'Kind', 'Room');
+  PropertyEditor.AddProperty('name', 'Name', SelectedRoom.Name, wpkText, 'Identity');
+  PropertyEditor.AddProperty('id', 'ID', SelectedRoom.ID, wpkReadOnly, 'Identity');
+  PropertyEditor.AddProperty('kind', 'Kind', 'Room', wpkReadOnly, 'Identity');
   PropertyEditor.AddProperty('description', 'Description',
-    SelectedRoom.Description, wpkText);
+    SelectedRoom.Description, wpkText, 'Appearance');
 end;
 
 procedure TWorldWrightMainForm.GoHereMenuItemClick(Sender: TObject);
