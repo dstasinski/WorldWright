@@ -65,6 +65,7 @@ type
     function ExecuteCommand(const ACommand: string): string;
     function IsObjectCarried(AObject: TWorldObject): Boolean;
     function RuntimeObjectRoom(AObject: TWorldObject): TWorldRoom;
+    procedure SynchronizeWorldDefinitions;
     procedure Reset;
     { CurrentRoom is intentionally writable so builder operations can move the
       shared live session without duplicating player-location state. }
@@ -143,6 +144,30 @@ begin
     Result := nil
   else
     Result := State.Room;
+end;
+
+procedure TGameSession.SynchronizeWorldDefinitions;
+var
+  I: Integer;
+  WorldObject: TWorldObject;
+  Found: Boolean;
+begin
+  { Builder operations may add or delete definitions while a test is running.
+    Remove runtime records whose definitions no longer exist, comparing pointer
+    identity only (never dereferencing a potentially deleted definition).
+    Newly authored objects are initialized lazily by ObjectState when needed. }
+  for I := FObjectStates.Count - 1 downto 0 do
+  begin
+    Found := False;
+    for WorldObject in FWorld.Objects do
+      if FObjectStates[I].WorldObject = WorldObject then
+      begin
+        Found := True;
+        Break;
+      end;
+    if not Found then
+      FObjectStates.Delete(I);
+  end;
 end;
 
 procedure TGameSession.Reset;
