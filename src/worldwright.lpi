@@ -55,7 +55,7 @@
     <PathDelim Value="\\"/>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="gui;core;engine;builder;parser"/>
+      <OtherUnitFiles Value="gui;core;engine;builder;parser;components/WWPropertyEditor"/>
       <UnitOutputDirectory Value="../build"/>
     </SearchPaths>
     <Linking>
