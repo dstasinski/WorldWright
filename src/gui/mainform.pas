@@ -5,8 +5,8 @@ unit MainForm;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Grids, Menus,
-  WWorld, WGameSession, WBuilderSession;
+  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Menus,
+  WWorld, WGameSession, WBuilderSession, WWPropertyEditor;
 
 type
   { TWorldWrightMainForm is WorldWright's single top-level application window.
@@ -18,7 +18,7 @@ type
     CommandMemo: TMemo;
     CommandPanel: TPanel;
     GoHereMenuItem: TMenuItem;
-    InspectorGrid: TStringGrid;
+    PropertyEditor: TWWPropertyEditor;
     LeftPanel: TPanel;
     WorldTreePopupMenu: TPopupMenu;
     RightPanel: TPanel;
@@ -219,92 +219,68 @@ var
   SelectedRoom: TWorldRoom;
   LocationText: string;
 begin
-  InspectorGrid.Clean;
-  InspectorGrid.Cells[0, 0] := 'Property';
-  InspectorGrid.Cells[1, 0] := 'Value';
+  { TWWPropertyEditor is only a presentation/editor surface. MainForm adapts
+    selected WorldWright entities into neutral property metadata; the component
+    itself remains independent of the world model. }
+  PropertyEditor.Clear;
 
   SelectedEntity := nil;
   if (WorldTree.Selected <> nil) and (WorldTree.Selected.Data <> nil) then
     SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
 
-  { World and Inventory are structural/session nodes rather than TWorldEntity
-    instances. Give them explicit inspector content instead of falling through
-    to CurrentRoom, which would make selection appear to change meaning. }
   if (WorldTree.Selected <> nil) and
     (WorldTree.Selected.Data = nil) and
     SameText(WorldTree.Selected.Text, 'World') then
   begin
-    InspectorGrid.RowCount := 5;
-    InspectorGrid.Cells[0, 1] := 'Name';
-    InspectorGrid.Cells[1, 1] := 'World';
-    InspectorGrid.Cells[0, 2] := 'Kind';
-    InspectorGrid.Cells[1, 2] := 'Project World';
-    InspectorGrid.Cells[0, 3] := 'Rooms';
-    InspectorGrid.Cells[1, 3] := IntToStr(FWorld.Rooms.Count);
-    InspectorGrid.Cells[0, 4] := 'Objects';
-    InspectorGrid.Cells[1, 4] := IntToStr(FWorld.Objects.Count);
+    PropertyEditor.AddProperty('name', 'Name', 'World');
+    PropertyEditor.AddProperty('kind', 'Kind', 'Project World');
+    PropertyEditor.AddProperty('room_count', 'Rooms',
+      IntToStr(FWorld.Rooms.Count));
+    PropertyEditor.AddProperty('object_count', 'Objects',
+      IntToStr(FWorld.Objects.Count));
     Exit;
   end;
 
-  { Inventory has no persistent model identity of its own. }
   if (WorldTree.Selected <> nil) and
     (WorldTree.Selected.Data = nil) and
     SameText(WorldTree.Selected.Text, 'Inventory') then
   begin
-    InspectorGrid.RowCount := 3;
-    InspectorGrid.Cells[0, 1] := 'Name';
-    InspectorGrid.Cells[1, 1] := 'Inventory';
-    InspectorGrid.Cells[0, 2] := 'Kind';
-    InspectorGrid.Cells[1, 2] := 'Player Inventory';
+    PropertyEditor.AddProperty('name', 'Name', 'Inventory');
+    PropertyEditor.AddProperty('kind', 'Kind', 'Player Inventory');
     Exit;
   end;
 
   if SelectedEntity is TWorldObject then
   begin
     SelectedObject := TWorldObject(SelectedEntity);
-    InspectorGrid.RowCount := 6;
-    InspectorGrid.Cells[0, 1] := 'Name';
-    InspectorGrid.Cells[1, 1] := SelectedObject.Name;
-    InspectorGrid.Cells[0, 2] := 'ID';
-    InspectorGrid.Cells[1, 2] := SelectedObject.ID;
-    InspectorGrid.Cells[0, 3] := 'Kind';
-    InspectorGrid.Cells[1, 3] := 'Object';
-    InspectorGrid.Cells[0, 4] := 'Tag';
-    InspectorGrid.Cells[1, 4] := SelectedObject.Tag;
-    InspectorGrid.Cells[0, 5] := 'Description';
-    InspectorGrid.Cells[1, 5] := SelectedObject.Description;
+    PropertyEditor.AddProperty('name', 'Name', SelectedObject.Name, wpkText);
+    PropertyEditor.AddProperty('id', 'ID', SelectedObject.ID);
+    PropertyEditor.AddProperty('kind', 'Kind', 'Object');
+    PropertyEditor.AddProperty('tag', 'Tag', SelectedObject.Tag, wpkText);
+    PropertyEditor.AddProperty('description', 'Description',
+      SelectedObject.Description, wpkText);
+
     if SelectedObject.LocationKind = olPlayerInventory then
       LocationText := 'Inventory'
     else if SelectedObject.Room <> nil then
       LocationText := SelectedObject.Room.Name
     else
       LocationText := '';
-    InspectorGrid.RowCount := 7;
-    InspectorGrid.Cells[0, 6] := 'Location';
-    InspectorGrid.Cells[1, 6] := LocationText;
+    PropertyEditor.AddProperty('location', 'Location', LocationText);
     Exit;
   end;
 
-  { The inspector is selection-driven. An empty selection must remain empty;
-    CurrentRoom is independently communicated by the tree's [current] marker. }
+  { The inspector is selection-driven. CurrentRoom remains independently
+    represented by the World Tree's [current] marker. }
   if not (SelectedEntity is TWorldRoom) then
-  begin
-    InspectorGrid.RowCount := 1;
     Exit;
-  end;
 
   SelectedRoom := TWorldRoom(SelectedEntity);
-  InspectorGrid.RowCount := 5;
-  begin
-    InspectorGrid.Cells[0, 1] := 'Name';
-    InspectorGrid.Cells[1, 1] := SelectedRoom.Name;
-    InspectorGrid.Cells[0, 2] := 'ID';
-    InspectorGrid.Cells[1, 2] := SelectedRoom.ID;
-    InspectorGrid.Cells[0, 3] := 'Kind';
-    InspectorGrid.Cells[1, 3] := 'Room';
-    InspectorGrid.Cells[0, 4] := 'Description';
-    InspectorGrid.Cells[1, 4] := SelectedRoom.Description;
-  end;
+  PropertyEditor.AddProperty('name', 'Name', SelectedRoom.Name, wpkText);
+  PropertyEditor.AddProperty('id', 'ID', SelectedRoom.ID);
+  PropertyEditor.AddProperty('kind', 'Kind', 'Room');
+  PropertyEditor.AddProperty('description', 'Description',
+    SelectedRoom.Description, wpkText);
 end;
 
 procedure TWorldWrightMainForm.GoHereMenuItemClick(Sender: TObject);
