@@ -43,6 +43,7 @@ type
     procedure BuildStarterWorld;
     procedure ExecuteInputLine(const ACommand: string);
     function ObjectTreeLabel(AObject: TWorldObject): string;
+    function RoomTreeLabel(ARoom: TWorldRoom): string;
     procedure ProcessPastedLines;
     procedure RefreshWorldView;
     procedure RefreshInspector;
@@ -111,6 +112,18 @@ begin
     Result := AObject.Name;
 end;
 
+{ Room selection and current authoring location are intentionally separate.
+  Mark the session's current room in the tree so authors can inspect another
+  entity without losing sight of where player/builder commands currently act.
+  The marker is view-only and never becomes part of the room's model Name. }
+function TWorldWrightMainForm.RoomTreeLabel(ARoom: TWorldRoom): string;
+begin
+  if ARoom = FSession.CurrentRoom then
+    Result := ARoom.Name + ' [current]'
+  else
+    Result := ARoom.Name;
+end;
+
 { Rebuild the current bootstrap tree/inspector from the model after every
   command. These controls are temporary UI surfaces; model state never lives
   in the tree or grid. }
@@ -147,7 +160,7 @@ begin
     falsely presenting inventory as a room or persistent containment parent. }
   for Room in FWorld.Rooms do
   begin
-    RoomNode := WorldTree.Items.AddChild(WorldNode, Room.Name);
+    RoomNode := WorldTree.Items.AddChild(WorldNode, RoomTreeLabel(Room));
     RoomNode.Data := Room;
     for WorldObject in FWorld.Objects do
       if (WorldObject.LocationKind = olRoom) and
