@@ -19,11 +19,13 @@ type
   TWWPropertyItem = class(TCollectionItem)
   private
     FID: string;
+    FCategory: string;
     FKind: TWWPropertyKind;
     FName: string;
     FValue: string;
   published
     property ID: string read FID write FID;
+    property Category: string read FCategory write FCategory;
     property Kind: TWWPropertyKind read FKind write FKind default wpkReadOnly;
     property Name: string read FName write FName;
     property Value: string read FValue write FValue;
@@ -76,7 +78,8 @@ type
     destructor Destroy; override;
     procedure Clear;
     function AddProperty(const AID, AName, AValue: string;
-      AKind: TWWPropertyKind = wpkReadOnly): TWWPropertyItem;
+      AKind: TWWPropertyKind = wpkReadOnly;
+      const ACategory: string = 'General'): TWWPropertyItem;
   published
     property Align;
     property Anchors;
@@ -216,7 +219,23 @@ end;
 
 procedure TWWPropertyEditor.SyncGrid;
 var
-  I: Integer;
+  I, J: Integer;
+  Category: string;
+  CategorySeen: Boolean;
+
+  procedure AddCategoryRow(AGrid: TStringGrid; const ACategory: string);
+  begin
+    AGrid.RowCount := AGrid.RowCount + 1;
+    AGrid.Cells[0, AGrid.RowCount - 1] := ACategory;
+    AGrid.Cells[1, AGrid.RowCount - 1] := '';
+  end;
+
+  procedure AddItemRow(AGrid: TStringGrid; AItem: TWWPropertyItem);
+  begin
+    AGrid.RowCount := AGrid.RowCount + 1;
+    AGrid.Cells[0, AGrid.RowCount - 1] := '  ' + AItem.Name;
+    AGrid.Cells[1, AGrid.RowCount - 1] := AItem.Value;
+  end;
 begin
   if FGrid = nil then
     Exit;
@@ -226,19 +245,44 @@ begin
     its own Lazarus/Delphi-style inspector tab. }
   FGrid.RowCount := 1;
   FEventsGrid.RowCount := 1;
+
+  { Render each category once, in first-use order, followed by its indented
+    members. Category rows deliberately have no value; they are presentation
+    structure rather than editable property metadata. }
   for I := 0 to FProperties.Count - 1 do
+  begin
+    Category := Trim(FProperties[I].Category);
+    if Category = '' then
+      Category := 'General';
+
+    CategorySeen := False;
+    for J := 0 to I - 1 do
+      if SameText(Trim(FProperties[J].Category), Category) and
+        ((FProperties[J].Kind = wpkEvent) =
+         (FProperties[I].Kind = wpkEvent)) then
+      begin
+        CategorySeen := True;
+        Break;
+      end;
+    if CategorySeen then
+      Continue;
+
     if FProperties[I].Kind = wpkEvent then
-    begin
-      FEventsGrid.RowCount := FEventsGrid.RowCount + 1;
-      FEventsGrid.Cells[0, FEventsGrid.RowCount - 1] := FProperties[I].Name;
-      FEventsGrid.Cells[1, FEventsGrid.RowCount - 1] := FProperties[I].Value;
-    end
+      AddCategoryRow(FEventsGrid, Category)
     else
-    begin
-      FGrid.RowCount := FGrid.RowCount + 1;
-      FGrid.Cells[0, FGrid.RowCount - 1] := FProperties[I].Name;
-      FGrid.Cells[1, FGrid.RowCount - 1] := FProperties[I].Value;
-    end;
+      AddCategoryRow(FGrid, Category);
+
+    for J := I to FProperties.Count - 1 do
+      if SameText(Trim(FProperties[J].Category), Category) and
+        ((FProperties[J].Kind = wpkEvent) =
+         (FProperties[I].Kind = wpkEvent)) then
+      begin
+        if FProperties[J].Kind = wpkEvent then
+          AddItemRow(FEventsGrid, FProperties[J])
+        else
+          AddItemRow(FGrid, FProperties[J]);
+      end;
+  end;
 
   { Keep a useful Lazarus-style property/value split while respecting the
     component's actual width. A later milestone will make the divider user
@@ -269,10 +313,11 @@ begin
 end;
 
 function TWWPropertyEditor.AddProperty(const AID, AName, AValue: string;
-  AKind: TWWPropertyKind): TWWPropertyItem;
+  AKind: TWWPropertyKind; const ACategory: string): TWWPropertyItem;
 begin
   Result := FProperties.Add;
   Result.ID := AID;
+  Result.Category := ACategory;
   Result.Name := AName;
   Result.Value := AValue;
   Result.Kind := AKind;
