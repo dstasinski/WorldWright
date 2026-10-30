@@ -5,7 +5,7 @@ unit WWPropertyEditor;
 interface
 
 uses
-  Classes, SysUtils, Controls, Grids;
+  Classes, SysUtils, Controls, Grids, ComCtrls;
 
 type
   { TWWPropertyKind identifies the editor semantics of a property independently
@@ -57,9 +57,14 @@ type
     Read-only and event rows cannot be changed through the text editor. }
   TWWPropertyEditor = class(TCustomControl)
   private
+    FPageControl: TPageControl;
+    FPropertiesTab: TTabSheet;
+    FEventsTab: TTabSheet;
     FGrid: TStringGrid;
+    FEventsGrid: TStringGrid;
     FProperties: TWWPropertyItems;
     FOnPropertyChanged: TWWPropertyChangedEvent;
+    procedure ConfigureGrid(AGrid: TStringGrid);
     procedure GridValidateEntry(Sender: TObject; ACol, ARow: Integer;
       const OldValue: string; var NewValue: string);
     procedure SetProperties(AValue: TWWPropertyItems);
@@ -111,19 +116,34 @@ constructor TWWPropertyEditor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FProperties := TWWPropertyItems.Create(Self);
-  FGrid := TStringGrid.Create(Self);
-  FGrid.Parent := Self;
-  FGrid.Align := alClient;
-  FGrid.ColCount := 2;
-  FGrid.FixedCols := 0;
-  FGrid.FixedRows := 1;
-  FGrid.RowCount := 1;
-  FGrid.Options := [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine,
-    goRangeSelect, goSmoothScroll, goEditing];
+
+  { Keep the inspector's permanent visual structure inside the reusable
+    component. Hosts see one control, while authors get the familiar
+    Properties/Events split used by Lazarus and Delphi inspectors. }
+  FPageControl := TPageControl.Create(Self);
+  FPageControl.Parent := Self;
+  FPageControl.Align := alClient;
+
+  FPropertiesTab := TTabSheet.Create(FPageControl);
+  FPropertiesTab.PageControl := FPageControl;
+  FPropertiesTab.Caption := 'Properties';
+
+  FEventsTab := TTabSheet.Create(FPageControl);
+  FEventsTab.PageControl := FPageControl;
+  FEventsTab.Caption := 'Events';
+
+  FGrid := TStringGrid.Create(FPropertiesTab);
+  FGrid.Parent := FPropertiesTab;
+  ConfigureGrid(FGrid);
   FGrid.OnValidateEntry := @GridValidateEntry;
-  FGrid.Cells[0, 0] := 'Property';
-  FGrid.Cells[1, 0] := 'Value';
-  FGrid.TabStop := True;
+
+  FEventsGrid := TStringGrid.Create(FEventsTab);
+  FEventsGrid.Parent := FEventsTab;
+  ConfigureGrid(FEventsGrid);
+  { Event editing/opening is deliberately deferred until neutral rule objects
+    exist. The tab is real now so future event support does not require another
+    inspector-layout replacement. }
+  FEventsGrid.Options := FEventsGrid.Options - [goEditing];
 
   Width := 280;
   Height := 200;
@@ -135,6 +155,20 @@ begin
   { FGrid is owned by Self through the LCL component ownership mechanism. }
   FProperties.Free;
   inherited Destroy;
+end;
+
+procedure TWWPropertyEditor.ConfigureGrid(AGrid: TStringGrid);
+begin
+  AGrid.Align := alClient;
+  AGrid.ColCount := 2;
+  AGrid.FixedCols := 0;
+  AGrid.FixedRows := 1;
+  AGrid.RowCount := 1;
+  AGrid.Options := [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine,
+    goRangeSelect, goSmoothScroll, goEditing];
+  AGrid.Cells[0, 0] := 'Property';
+  AGrid.Cells[1, 0] := 'Value';
+  AGrid.TabStop := True;
 end;
 
 procedure TWWPropertyEditor.GridValidateEntry(Sender: TObject;
@@ -187,15 +221,24 @@ begin
   if FGrid = nil then
     Exit;
 
-  FGrid.RowCount := FProperties.Count + 1;
-  FGrid.Cells[0, 0] := 'Property';
-  FGrid.Cells[1, 0] := 'Value';
-
+  { Properties and Events are two projections of the same neutral metadata
+    collection. This keeps the host API stable while giving each semantic kind
+    its own Lazarus/Delphi-style inspector tab. }
+  FGrid.RowCount := 1;
+  FEventsGrid.RowCount := 1;
   for I := 0 to FProperties.Count - 1 do
-  begin
-    FGrid.Cells[0, I + 1] := FProperties[I].Name;
-    FGrid.Cells[1, I + 1] := FProperties[I].Value;
-  end;
+    if FProperties[I].Kind = wpkEvent then
+    begin
+      FEventsGrid.RowCount := FEventsGrid.RowCount + 1;
+      FEventsGrid.Cells[0, FEventsGrid.RowCount - 1] := FProperties[I].Name;
+      FEventsGrid.Cells[1, FEventsGrid.RowCount - 1] := FProperties[I].Value;
+    end
+    else
+    begin
+      FGrid.RowCount := FGrid.RowCount + 1;
+      FGrid.Cells[0, FGrid.RowCount - 1] := FProperties[I].Name;
+      FGrid.Cells[1, FGrid.RowCount - 1] := FProperties[I].Value;
+    end;
 
   { Keep a useful Lazarus-style property/value split while respecting the
     component's actual width. A later milestone will make the divider user
@@ -204,6 +247,12 @@ begin
   begin
     FGrid.ColWidths[0] := FGrid.ClientWidth div 2;
     FGrid.ColWidths[1] := FGrid.ClientWidth - FGrid.ColWidths[0] - 1;
+  end;
+  if FEventsGrid.ClientWidth > 80 then
+  begin
+    FEventsGrid.ColWidths[0] := FEventsGrid.ClientWidth div 2;
+    FEventsGrid.ColWidths[1] := FEventsGrid.ClientWidth -
+      FEventsGrid.ColWidths[0] - 1;
   end;
 end;
 
