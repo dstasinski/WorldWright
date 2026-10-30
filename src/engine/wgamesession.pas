@@ -82,7 +82,7 @@ begin
   FWorldObject := AWorldObject;
   { WorldObject.Room is authored initial state. Runtime changes never write it. }
   FRoom := AWorldObject.Room;
-  FCarried := AIsObjectCarried(WorldObject);
+  FCarried := AWorldObject.LocationKind = olPlayerInventory;
   if FCarried then
     FRoom := nil;
 end;
