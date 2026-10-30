@@ -285,13 +285,16 @@ begin
     Exit;
   end;
 
-  if SelectedEntity is TWorldRoom then
-    SelectedRoom := TWorldRoom(SelectedEntity)
-  else
-    SelectedRoom := FSession.CurrentRoom;
+  { The inspector is selection-driven. An empty selection must remain empty;
+    CurrentRoom is independently communicated by the tree's [current] marker. }
+  if not (SelectedEntity is TWorldRoom) then
+  begin
+    InspectorGrid.RowCount := 1;
+    Exit;
+  end;
 
+  SelectedRoom := TWorldRoom(SelectedEntity);
   InspectorGrid.RowCount := 5;
-  if SelectedRoom <> nil then
   begin
     InspectorGrid.Cells[0, 1] := 'Name';
     InspectorGrid.Cells[1, 1] := SelectedRoom.Name;
