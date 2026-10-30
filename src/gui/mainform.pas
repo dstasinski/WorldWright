@@ -384,7 +384,13 @@ begin
   WorkspaceMemo.Lines.Add('> ' + Command);
 
   if Command[1] = '@' then
-    Response := FBuilder.ExecuteCommand(Command)
+  begin
+    Response := FBuilder.ExecuteCommand(Command);
+    { Structural builder edits can add/delete definitions while preserving the
+      rest of the author's current test state. Synchronization removes stale
+      runtime records without performing a full test restart. }
+    FSession.SynchronizeWorldDefinitions;
+  end
   else
     Response := FSession.ExecuteCommand(Command);
   if Response <> '' then
