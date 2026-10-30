@@ -45,6 +45,9 @@ type
     function ObjectTreeLabel(AObject: TWorldObject): string;
     function RoomTreeLabel(ARoom: TWorldRoom): string;
     procedure ProcessPastedLines;
+    procedure PropertyEditorPropertyChanged(Sender: TObject;
+      AProperty: TWWPropertyItem; const AOldValue, ANewValue: string;
+      var Accept: Boolean);
     procedure RefreshWorldView;
     procedure RefreshInspector;
     procedure SubmitCommand;
@@ -63,6 +66,7 @@ begin
   BuildStarterWorld;
   FSession := TGameSession.Create(FWorld);
   FBuilder := TBuilderSession.Create(FWorld, FSession);
+  PropertyEditor.OnPropertyChanged := @PropertyEditorPropertyChanged;
   RefreshWorldView;
 
   WorkspaceMemo.Clear;
@@ -210,6 +214,37 @@ begin
     WorldTree.Selected := SelectedNode;
 
   RefreshInspector;
+end;
+
+procedure TWorldWrightMainForm.PropertyEditorPropertyChanged(
+  Sender: TObject; AProperty: TWWPropertyItem;
+  const AOldValue, ANewValue: string; var Accept: Boolean);
+var
+  NewName: string;
+  SelectedEntity: TWorldEntity;
+begin
+  Accept := False;
+
+  { Property metadata identifies semantics by stable ID rather than caption.
+    This first editing slice deliberately enables only Name; Tag and
+    Description remain displayed as text-kind metadata but will receive their
+    own model-backed handlers in subsequent slices. }
+  if not SameText(AProperty.ID, 'name') then
+    Exit;
+  if (WorldTree.Selected = nil) or (WorldTree.Selected.Data = nil) then
+    Exit;
+
+  SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
+  NewName := Trim(ANewValue);
+  if NewName = '' then
+    Exit;
+
+  SelectedEntity.Name := NewName;
+  Accept := True;
+
+  { Rebuild labels from the model immediately. Stable entity IDs preserve the
+    selected node even though its displayed room/object name may have changed. }
+  RefreshWorldView;
 end;
 
 procedure TWorldWrightMainForm.RefreshInspector;
