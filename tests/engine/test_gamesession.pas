@@ -9,6 +9,7 @@ var
   World: TWorld;
   Laboratory, Hallway: TWorldRoom;
   Session: TGameSession;
+  BrassKey: TWorldObject;
   Output: string;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
@@ -25,11 +26,9 @@ begin
       'A dusty laboratory filled with abandoned equipment.';
     Hallway := World.AddRoom('hallway', 'Hallway');
     Hallway.Description := 'A narrow hallway stretches north and south.';
-    with World.AddObject('brass_key', 'brass key', Laboratory) do
-    begin
-      Description := 'A small, tarnished brass key.';
-      Tag := 'a tarnished brass key';
-    end;
+    BrassKey := World.AddObject('brass_key', 'brass key', Laboratory);
+    BrassKey.Description := 'A small, tarnished brass key.';
+    BrassKey.Tag := 'a tarnished brass key';
     Laboratory.Connect(wdNorth, Hallway);
     Hallway.Connect(wdSouth, Laboratory);
 
@@ -53,6 +52,10 @@ begin
       Check(Pos('Taken', Output) > 0, 'TAKE did not report success');
       Check(Pos('brass key', Session.ExecuteCommand('inventory')) > 0,
         'INVENTORY did not show the carried object');
+      Check(BrassKey.Room = Laboratory,
+        'TAKE mutated the authored initial object location');
+      Check(Session.IsObjectCarried(BrassKey),
+        'TAKE did not update runtime inventory state');
       Check(Pos('tarnished brass key',
         Session.ExecuteCommand('examine brass key')) > 0,
         'EXAMINE could not inspect a carried object');
@@ -65,6 +68,16 @@ begin
         'DROP left the object in inventory');
       Check(Pos('brass key', Session.ExecuteCommand('look')) > 0,
         'DROP did not return the object to the current room');
+      Check(BrassKey.Room = Laboratory,
+        'DROP mutated the authored initial object location');
+
+      Output := Session.ExecuteCommand('take brass key');
+      Check(Pos('Taken', Output) > 0, 'second TAKE did not report success');
+      Session.Reset;
+      Check(not Session.IsObjectCarried(BrassKey),
+        'Reset did not discard runtime inventory state');
+      Check(Session.RuntimeObjectRoom(BrassKey) = Laboratory,
+        'Reset did not restore authored initial object location');
 
       with World.AddObject('brass_key_2', 'brass key', Laboratory) do
         Tag := 'a shiny brass key';
