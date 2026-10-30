@@ -167,8 +167,7 @@ begin
     RoomNode := WorldTree.Items.AddChild(WorldNode, RoomTreeLabel(Room));
     RoomNode.Data := Room;
     for WorldObject in FWorld.Objects do
-      if (WorldObject.LocationKind = olRoom) and
-        (WorldObject.Room = Room) then
+      if FSession.RuntimeObjectRoom(WorldObject) = Room then
         begin
           NewNode := WorldTree.Items.AddChild(RoomNode, ObjectTreeLabel(WorldObject));
           NewNode.Data := WorldObject;
@@ -178,7 +177,7 @@ begin
 
   InventoryNode := WorldTree.Items.AddChild(WorldNode, 'Inventory');
   for WorldObject in FWorld.Objects do
-    if WorldObject.LocationKind = olPlayerInventory then
+    if FSession.IsObjectCarried(WorldObject) then
       begin
         NewNode := WorldTree.Items.AddChild(InventoryNode, ObjectTreeLabel(WorldObject));
         NewNode.Data := WorldObject;
@@ -295,13 +294,24 @@ begin
     PropertyEditor.AddProperty('description', 'Description',
       SelectedObject.Description, wpkText);
 
-    if SelectedObject.LocationKind = olPlayerInventory then
-      LocationText := 'Inventory'
-    else if SelectedObject.Room <> nil then
+    { Show both authored and runtime location explicitly. The authored initial
+      value is what persistence/export uses; the runtime value is disposable
+      play-test state and may differ after TAKE/DROP. }
+    if SelectedObject.Room <> nil then
       LocationText := SelectedObject.Room.Name
     else
       LocationText := '';
-    PropertyEditor.AddProperty('location', 'Location', LocationText);
+    PropertyEditor.AddProperty('initial_location', 'Initial Location',
+      LocationText);
+
+    if FSession.IsObjectCarried(SelectedObject) then
+      LocationText := 'Inventory'
+    else if FSession.RuntimeObjectRoom(SelectedObject) <> nil then
+      LocationText := FSession.RuntimeObjectRoom(SelectedObject).Name
+    else
+      LocationText := '';
+    PropertyEditor.AddProperty('runtime_location', 'Test Location',
+      LocationText);
     Exit;
   end;
 
