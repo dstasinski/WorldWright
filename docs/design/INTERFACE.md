@@ -24,6 +24,25 @@ The property inspector is a design inspiration rather than a requirement to reus
 
 Panels should eventually be resizable and collapsible. Play mode may therefore provide an uncluttered transcript while Build mode exposes authoring tools.
 
+## Property inspector target
+
+The current property grid is an implementation foundation, not the intended
+finished appearance. The inspector should deliberately resemble the familiar
+Lazarus/Delphi Object Inspector while remaining a WorldWright-specific control.
+
+The inspector has two primary tabs: **Properties** and **Events**. Properties
+use categorized property/value rows with a user-adjustable divider, clear
+read-only styling, and editors appropriate to the value type (text, Boolean,
+enumeration, numeric value, object reference, and richer editors where needed).
+Long or structured values may open a workspace editor rather than being forced
+into a single-line cell.
+
+The Events tab presents neutral WorldWright semantic hooks using the same
+property/value visual language. Event values reference WorldWright rules rather
+than Pascal methods or target-language source. Double-clicking or otherwise
+activating an event should create/open its associated rule in the Rule Editor,
+mirroring the productive Lazarus/Delphi event-authoring workflow.
+
 ## Architectural rule
 
 The GUI is a view/editor of the same neutral live world model used by parser commands, builder commands, persistence, validation, importers, and exporters. Changing an entity through the inspector and changing it through an @builder command must ultimately use the same model operations.
