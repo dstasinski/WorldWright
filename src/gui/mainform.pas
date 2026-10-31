@@ -16,6 +16,7 @@ type
   TWorldWrightMainForm = class(TForm)
     AddRuleActionButton: TButton;
     AddRuleConditionButton: TButton;
+    DeleteRuleItemButton: TButton;
     CenterPanel: TPanel;
     CommandMemo: TMemo;
     CommandPanel: TPanel;
@@ -32,6 +33,7 @@ type
     procedure AddRuleActionButtonClick(Sender: TObject);
     procedure AddRuleConditionButtonClick(Sender: TObject);
     procedure CommandMemoChange(Sender: TObject);
+    procedure DeleteRuleItemButtonClick(Sender: TObject);
     procedure CommandMemoKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -245,6 +247,49 @@ begin
   RefreshInspector;
 end;
 
+procedure TWorldWrightMainForm.DeleteRuleItemButtonClick(Sender: TObject);
+var
+  ItemText: string;
+  ItemNumber, ConditionCount: Integer;
+begin
+  if FCurrentRule = nil then
+    Exit;
+
+  if (FCurrentRule.Conditions.Count = 0) and
+     (FCurrentRule.Actions.Count = 0) then
+  begin
+    MessageDlg('Delete Rule Item', 'This rule has no items to delete.',
+      mtInformation, [mbOK], 0);
+    Exit;
+  end;
+
+  ItemText := '';
+  if not InputQuery('Delete Rule Item',
+    'Item number (conditions first, then actions):', ItemText) then
+    Exit;
+  if not TryStrToInt(Trim(ItemText), ItemNumber) then
+  begin
+    MessageDlg('Delete Rule Item', 'Enter a valid item number.',
+      mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  ConditionCount := FCurrentRule.Conditions.Count;
+  if (ItemNumber >= 1) and (ItemNumber <= ConditionCount) then
+    FCurrentRule.Conditions.Delete(ItemNumber - 1)
+  else if (ItemNumber > ConditionCount) and
+          (ItemNumber <= ConditionCount + FCurrentRule.Actions.Count) then
+    FCurrentRule.Actions.Delete(ItemNumber - ConditionCount - 1)
+  else
+  begin
+    MessageDlg('Delete Rule Item', 'That item number does not exist.',
+      mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  OpenRuleEditor(FCurrentRule);
+end;
+
 procedure TWorldWrightMainForm.AddRuleConditionButtonClick(Sender: TObject);
 var
   LeftOperand, OperatorText, RightOperand: string;
@@ -361,7 +406,7 @@ begin
       case RuleAction.Kind of
         wakSay: ActionText := 'Say "' + RuleAction.Value + '"';
       end;
-      WorkspaceMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' + ActionText);
+      WorkspaceMemo.Lines.Add('  ' + IntToStr(ARule.Conditions.Count + I + 1) + '. ' + ActionText);
     end;
 end;
 
