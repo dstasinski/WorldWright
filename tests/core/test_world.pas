@@ -7,6 +7,7 @@ uses
 
 var
   World: TWorld;
+  Rule: TWorldRule;
   Laboratory, Hallway, ObservationDeck: TWorldRoom;
   BrassKey, OtherKey, ResolvedObject: TWorldObject;
   ResolveStatus: TObjectResolveStatus;
@@ -21,11 +22,24 @@ begin
   World := TWorld.Create;
   try
     Laboratory := World.AddRoom('laboratory', 'Laboratory');
+    Check(Laboratory.Events.Count = 3,
+      'room did not initialize canonical lifecycle event hooks');
+    Check(Laboratory.Events[0].EventName = 'OnEnter',
+      'room OnEnter hook missing');
+
+    Rule := World.AddRule('laboratory_enter', 'Laboratory Enter');
+    Check(World.FindRuleByID('laboratory_enter') = Rule,
+      'rule stable-ID lookup failed');
+    Laboratory.Events[0].RuleID := Rule.ID;
+    Check(Laboratory.Events[0].RuleID = 'laboratory_enter',
+      'event binding did not retain stable rule ID');
     Laboratory.Description :=
       'A dusty laboratory filled with abandoned equipment.';
     Hallway := World.AddRoom('hallway', 'Hallway');
 
     BrassKey := World.AddObject('brass_key', 'brass key', Laboratory);
+    Check(BrassKey.Events.Count = 4,
+      'object did not initialize canonical action event hooks');
     BrassKey.Description := 'A small, tarnished brass key.';
 
     Laboratory.Connect(wdNorth, Hallway);
