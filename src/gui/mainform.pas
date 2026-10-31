@@ -274,7 +274,13 @@ begin
     Exit;
 
   FCurrentRule := ARule;
+  { The panel is designer-owned but starts hidden. GTK2 can leave an alBottom
+    sibling behind an alClient control when it becomes visible after initial
+    alignment. Bring it forward and explicitly realign the parent so the Rule
+    controls occupy their reserved strip immediately. }
   RuleEditorPanel.Visible := True;
+  RuleEditorPanel.BringToFront;
+  CenterPanel.Realign;
 
   { The first Rule Editor view is model-backed and read-only. Showing the real
     ordered semantic lists now keeps the workspace truthful while mutation
