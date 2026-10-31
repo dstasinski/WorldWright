@@ -39,6 +39,20 @@ begin
       'event binding lookup should be case insensitive');
     Check(FindEventBinding(Laboratory.Events, 'OnMissing') = nil,
       'unknown event binding should not resolve');
+    Rule.AddCondition(wckEquals, 'power_on', 'false');
+    Rule.AddAction(wakSay, 'The laboratory is eerily quiet.');
+    Check(Rule.Conditions.Count = 1, 'rule should own added condition');
+    Check(Rule.Conditions[0].Kind = wckEquals,
+      'rule condition kind was not retained');
+    Check(Rule.Conditions[0].LeftOperand = 'power_on',
+      'rule condition left operand was not retained');
+    Check(Rule.Conditions[0].RightOperand = 'false',
+      'rule condition right operand was not retained');
+    Check(Rule.Actions.Count = 1, 'rule should own added action');
+    Check(Rule.Actions[0].Kind = wakSay,
+      'rule action kind was not retained');
+    Check(Rule.Actions[0].Value = 'The laboratory is eerily quiet.',
+      'rule action value was not retained');
     Laboratory.Description :=
       'A dusty laboratory filled with abandoned equipment.';
     Hallway := World.AddRoom('hallway', 'Hallway');
