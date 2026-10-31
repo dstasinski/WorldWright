@@ -73,6 +73,8 @@ type
     procedure SetProperties(AValue: TWWPropertyItems);
     procedure SyncInspector;
     procedure ValueEditExit(Sender: TObject);
+  protected
+    procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
