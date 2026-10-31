@@ -29,12 +29,19 @@ type
     FKind: TWWPropertyKind;
     FName: string;
     FValue: string;
+    FChoices: TStringList;
+    function GetChoices: TStrings;
+    procedure SetChoices(AValue: TStrings);
+  public
+    constructor Create(ACollection: TCollection); override;
+    destructor Destroy; override;
   published
     property ID: string read FID write FID;
     property Category: string read FCategory write FCategory;
     property Kind: TWWPropertyKind read FKind write FKind default wpkReadOnly;
     property Name: string read FName write FName;
     property Value: string read FValue write FValue;
+    property Choices: TStrings read GetChoices write SetChoices;
   end;
 
   TWWPropertyItems = class(TOwnedCollection)
@@ -73,6 +80,7 @@ type
     procedure SetProperties(AValue: TWWPropertyItems);
     procedure SyncInspector;
     procedure ValueEditExit(Sender: TObject);
+    procedure ValueComboExit(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -99,6 +107,28 @@ type
   end;
 
 implementation
+
+constructor TWWPropertyItem.Create(ACollection: TCollection);
+begin
+  inherited Create(ACollection);
+  FChoices := TStringList.Create;
+end;
+
+destructor TWWPropertyItem.Destroy;
+begin
+  FChoices.Free;
+  inherited Destroy;
+end;
+
+function TWWPropertyItem.GetChoices: TStrings;
+begin
+  Result := FChoices;
+end;
+
+procedure TWWPropertyItem.SetChoices(AValue: TStrings);
+begin
+  FChoices.Assign(AValue);
+end;
 
 constructor TWWPropertyItems.Create(AOwner: TPersistent);
 begin
@@ -162,6 +192,7 @@ var
   HeaderPanel, CategoryPanel, RowPanel: TPanel;
   HeaderPropertyCell, HeaderValueCell, NameCell: TPanel;
   ValueEdit: TEdit;
+  ValueCombo: TComboBox;
 begin
   { Rows are rebuilt from metadata. They are disposable views; no authored
     state is stored in the controls themselves. }
@@ -261,18 +292,40 @@ begin
         NameCell.Tag := J + 1;
         NameCell.OnClick := @NameLabelClick;
 
-        ValueEdit := TEdit.Create(RowPanel);
-        ValueEdit.Parent := RowPanel;
-        ValueEdit.SetBounds(Divider, 3,
-          RowPanel.ClientWidth - Divider - 4, 27);
-        ValueEdit.Anchors := [akLeft, akTop, akRight];
-        ValueEdit.Text := FProperties[J].Value;
-        ValueEdit.Tag := J + 1;
-        ValueEdit.ReadOnly := FProperties[J].Kind <> wpkText;
-        if ValueEdit.ReadOnly then
-          ValueEdit.Font.Color := clGrayText
+        if FProperties[J].Kind in [wpkBoolean, wpkEnum, wpkReference] then
+        begin
+          ValueCombo := TComboBox.Create(RowPanel);
+          ValueCombo.Parent := RowPanel;
+          ValueCombo.SetBounds(Divider, 3,
+            RowPanel.ClientWidth - Divider - 4, 27);
+          ValueCombo.Anchors := [akLeft, akTop, akRight];
+          ValueCombo.Tag := J + 1;
+          ValueCombo.Style := csDropDownList;
+          if FProperties[J].Kind = wpkBoolean then
+          begin
+            ValueCombo.Items.Add('False');
+            ValueCombo.Items.Add('True');
+          end
+          else
+            ValueCombo.Items.Assign(FProperties[J].Choices);
+          ValueCombo.ItemIndex := ValueCombo.Items.IndexOf(FProperties[J].Value);
+          ValueCombo.OnExit := @ValueComboExit;
+        end
         else
-          ValueEdit.OnExit := @ValueEditExit;
+        begin
+          ValueEdit := TEdit.Create(RowPanel);
+          ValueEdit.Parent := RowPanel;
+          ValueEdit.SetBounds(Divider, 3,
+            RowPanel.ClientWidth - Divider - 4, 27);
+          ValueEdit.Anchors := [akLeft, akTop, akRight];
+          ValueEdit.Text := FProperties[J].Value;
+          ValueEdit.Tag := J + 1;
+          ValueEdit.ReadOnly := FProperties[J].Kind <> wpkText;
+          if ValueEdit.ReadOnly then
+            ValueEdit.Font.Color := clGrayText
+          else
+            ValueEdit.OnExit := @ValueEditExit;
+        end;
 
         Inc(TopPos, RowPanel.Height);
       end;
@@ -329,6 +382,35 @@ begin
     Prop.Value := NewValue
   else
     Edit.Text := OldValue;
+end;
+
+procedure TWWPropertyEditor.ValueComboExit(Sender: TObject);
+var
+  Combo: TComboBox;
+  Prop: TWWPropertyItem;
+  Index: Integer;
+  OldValue, NewValue: string;
+  Accept: Boolean;
+begin
+  Combo := TComboBox(Sender);
+  Index := Combo.Tag - 1;
+  if (Index < 0) or (Index >= FProperties.Count) then
+    Exit;
+
+  Prop := FProperties[Index];
+  OldValue := Prop.Value;
+  NewValue := Combo.Text;
+  if NewValue = OldValue then
+    Exit;
+
+  Accept := False;
+  if Assigned(FOnPropertyChanged) then
+    FOnPropertyChanged(Self, Prop, OldValue, NewValue, Accept);
+
+  if Accept then
+    Prop.Value := NewValue
+  else
+    Combo.ItemIndex := Combo.Items.IndexOf(OldValue);
 end;
 
 procedure TWWPropertyEditor.SetProperties(AValue: TWWPropertyItems);
