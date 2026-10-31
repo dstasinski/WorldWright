@@ -286,7 +286,10 @@ begin
 
   WorkspaceMemo.Lines.Add('');
   WorkspaceMemo.Lines.Add('Rule: ' + Rule.Name + ' [' + Rule.ID + ']');
-  RefreshInspector;
+  { Creating a rule changes authored tree structure. Rebuild the projection so
+    the new first-class Rule appears immediately while logical selection is
+    preserved by stable entity ID. }
+  RefreshWorldView;
 end;
 
 procedure TWorldWrightMainForm.PropertyEditorPropertyChanged(
