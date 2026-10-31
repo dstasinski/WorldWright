@@ -69,6 +69,8 @@ type
     procedure ConfigureGrid(AGrid: TStringGrid);
     function PropertyForGridRow(AGrid: TStringGrid;
       ARow: Integer): TWWPropertyItem;
+    procedure GridDrawCell(Sender: TObject; ACol, ARow: Integer;
+      ARect: TRect; AState: TGridDrawState);
     procedure GridPrepareCanvas(Sender: TObject; ACol, ARow: Integer;
       AState: TGridDrawState);
     procedure GridValidateEntry(Sender: TObject; ACol, ARow: Integer;
@@ -176,6 +178,7 @@ begin
   AGrid.Cells[0, 0] := 'Property';
   AGrid.Cells[1, 0] := 'Value';
   AGrid.TabStop := True;
+  AGrid.OnDrawCell := @GridDrawCell;
   AGrid.OnPrepareCanvas := @GridPrepareCanvas;
 end;
 
@@ -202,6 +205,44 @@ begin
         Result := FProperties[I];
         Exit;
       end;
+end;
+
+procedure TWWPropertyEditor.GridDrawCell(Sender: TObject;
+  ACol, ARow: Integer; ARect: TRect; AState: TGridDrawState);
+var
+  Grid: TStringGrid;
+  Prop: TWWPropertyItem;
+  FullRect: TRect;
+  Caption: string;
+begin
+  Grid := TStringGrid(Sender);
+  if ARow = 0 then
+    Exit;
+
+  Prop := PropertyForGridRow(Grid, ARow);
+  if Prop <> nil then
+    Exit;
+
+  { Category headings are one logical section header, not a property/value
+    pair. Draw the first cell across both columns and suppress the second-cell
+    divider/content so authors do not see a misleading empty Value field. }
+  if ACol = 0 then
+  begin
+    FullRect := ARect;
+    FullRect.Right := Grid.ClientWidth;
+    Grid.Canvas.Brush.Color := clBtnFace;
+    Grid.Canvas.FillRect(FullRect);
+    Grid.Canvas.Font.Style := [fsBold];
+    Caption := Grid.Cells[0, ARow];
+    Grid.Canvas.TextOut(FullRect.Left + 4, FullRect.Top +
+      (FullRect.Bottom - FullRect.Top - Grid.Canvas.TextHeight(Caption)) div 2,
+      Caption);
+  end
+  else
+  begin
+    Grid.Canvas.Brush.Color := clBtnFace;
+    Grid.Canvas.FillRect(ARect);
+  end;
 end;
 
 procedure TWWPropertyEditor.GridPrepareCanvas(Sender: TObject;
