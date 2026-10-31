@@ -365,6 +365,19 @@ begin
       LocationText := '';
     PropertyEditor.AddProperty('runtime_location', 'Test Location',
       LocationText, wpkReadOnly, 'Location');
+
+    { Events are neutral semantic hooks, not Pascal handlers. Rule storage and
+      activation arrive in the next rule-model slice; showing the canonical
+      hooks now establishes the authoring surface without inventing transient
+      GUI-owned event state. }
+    PropertyEditor.AddProperty('event_examine', 'OnExamine', '(none)',
+      wpkEvent, 'Actions');
+    PropertyEditor.AddProperty('event_take', 'OnTake', '(none)',
+      wpkEvent, 'Actions');
+    PropertyEditor.AddProperty('event_drop', 'OnDrop', '(none)',
+      wpkEvent, 'Actions');
+    PropertyEditor.AddProperty('event_use', 'OnUse', '(none)',
+      wpkEvent, 'Actions');
     Exit;
   end;
 
@@ -379,6 +392,13 @@ begin
   PropertyEditor.AddProperty('kind', 'Kind', 'Room', wpkReadOnly, 'Identity');
   PropertyEditor.AddProperty('description', 'Description',
     SelectedRoom.Description, wpkDialog, 'Appearance');
+
+  PropertyEditor.AddProperty('event_enter', 'OnEnter', '(none)',
+    wpkEvent, 'Lifecycle');
+  PropertyEditor.AddProperty('event_exit', 'OnExit', '(none)',
+    wpkEvent, 'Lifecycle');
+  PropertyEditor.AddProperty('event_look', 'OnLook', '(none)',
+    wpkEvent, 'Lifecycle');
   finally
     PropertyEditor.EndUpdate;
   end;
