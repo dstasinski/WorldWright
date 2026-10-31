@@ -9,7 +9,7 @@ var
   World: TWorld;
   Laboratory, Hallway: TWorldRoom;
   Session: TGameSession;
-  BrassKey: TWorldObject;
+  BrassKey, Apple: TWorldObject;
   Output: string;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
@@ -43,6 +43,17 @@ begin
         'LOOK omitted room description');
       Check(Pos('brass key', Output) > 0,
         'LOOK omitted an object in the current room');
+      Check(Pos('a tarnished brass key', Output) > 0,
+        'LOOK did not use an authored complete Tag phrase');
+
+      Apple := World.AddObject('apple', 'apple', Laboratory);
+      Output := Session.ExecuteCommand('look');
+      Check(Pos('an apple', Output) > 0,
+        'LOOK did not choose an before a vowel-leading object name');
+      Apple.Tag := 'the red apple';
+      Output := Session.ExecuteCommand('look');
+      Check(Pos('the red apple', Output) > 0,
+        'LOOK altered an authored complete Tag phrase');
 
       Output := Session.ExecuteCommand('examine brass key');
       Check(Pos('a tarnished brass key', Output) > 0,
