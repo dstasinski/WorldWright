@@ -82,6 +82,7 @@ type
     procedure SyncInspector;
     procedure ValueEditExit(Sender: TObject);
     procedure ValueComboExit(Sender: TObject);
+    procedure DialogButtonClick(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -197,6 +198,7 @@ var
   HeaderPropertyCell, HeaderValueCell, NameCell: TPanel;
   ValueEdit: TEdit;
   ValueCombo: TComboBox;
+  DialogButton: TButton;
 begin
   { Rows are rebuilt from metadata. They are disposable views; no authored
     state is stored in the controls themselves. }
@@ -296,7 +298,30 @@ begin
         NameCell.Tag := J + 1;
         NameCell.OnClick := @NameLabelClick;
 
-        if FProperties[J].Kind in [wpkBoolean, wpkEnum, wpkReference] then
+        if FProperties[J].Kind = wpkDialog then
+        begin
+          { Dialog properties show a compact read-only preview plus an ellipsis
+            button. The modal editor owns only a temporary string; accepted
+            changes still flow through the same neutral OnPropertyChanged
+            contract as inline editors. }
+          ValueEdit := TEdit.Create(RowPanel);
+          ValueEdit.Parent := RowPanel;
+          ValueEdit.SetBounds(Divider, 3,
+            RowPanel.ClientWidth - Divider - 34, 27);
+          ValueEdit.Anchors := [akLeft, akTop, akRight];
+          ValueEdit.Text := FProperties[J].Value;
+          ValueEdit.Tag := J + 1;
+          ValueEdit.ReadOnly := True;
+
+          DialogButton := TButton.Create(RowPanel);
+          DialogButton.Parent := RowPanel;
+          DialogButton.SetBounds(RowPanel.ClientWidth - 32, 3, 28, 27);
+          DialogButton.Anchors := [akTop, akRight];
+          DialogButton.Caption := '...';
+          DialogButton.Tag := J + 1;
+          DialogButton.OnClick := @DialogButtonClick;
+        end
+        else if FProperties[J].Kind in [wpkBoolean, wpkEnum, wpkReference] then
         begin
           ValueCombo := TComboBox.Create(RowPanel);
           ValueCombo.Parent := RowPanel;
@@ -386,6 +411,92 @@ begin
     Prop.Value := NewValue
   else
     Edit.Text := OldValue;
+end;
+
+procedure TWWPropertyEditor.DialogButtonClick(Sender: TObject);
+var
+  Button: TButton;
+  Prop: TWWPropertyItem;
+  DialogForm: TForm;
+  Editor: TMemo;
+  ButtonsPanel: TPanel;
+  OKButton, CancelButton: TButton;
+  Index: Integer;
+  OldValue, NewValue: string;
+  Accept: Boolean;
+begin
+  Button := TButton(Sender);
+  Index := Button.Tag - 1;
+  if (Index < 0) or (Index >= FProperties.Count) then
+    Exit;
+
+  Prop := FProperties[Index];
+  if Prop.Kind <> wpkDialog then
+    Exit;
+
+  DialogForm := TForm.CreateNew(Self);
+  try
+    DialogForm.Caption := 'Edit ' + Prop.Name;
+    DialogForm.Position := poScreenCenter;
+    DialogForm.Width := 560;
+    DialogForm.Height := 360;
+    DialogForm.BorderStyle := bsSizeable;
+    DialogForm.Font.Assign(Font);
+
+    ButtonsPanel := TPanel.Create(DialogForm);
+    ButtonsPanel.Parent := DialogForm;
+    ButtonsPanel.Align := alBottom;
+    ButtonsPanel.Height := 46;
+    ButtonsPanel.BevelOuter := bvNone;
+
+    CancelButton := TButton.Create(ButtonsPanel);
+    CancelButton.Parent := ButtonsPanel;
+    CancelButton.Caption := 'Cancel';
+    CancelButton.ModalResult := mrCancel;
+    CancelButton.SetBounds(ButtonsPanel.Width - 180, 8, 80, 30);
+    CancelButton.Anchors := [akTop, akRight];
+
+    OKButton := TButton.Create(ButtonsPanel);
+    OKButton.Parent := ButtonsPanel;
+    OKButton.Caption := 'OK';
+    OKButton.ModalResult := mrOK;
+    OKButton.Default := True;
+    OKButton.SetBounds(ButtonsPanel.Width - 92, 8, 80, 30);
+    OKButton.Anchors := [akTop, akRight];
+
+    Editor := TMemo.Create(DialogForm);
+    Editor.Parent := DialogForm;
+    Editor.Align := alClient;
+    Editor.ScrollBars := ssAutoBoth;
+    Editor.WordWrap := True;
+    Editor.Lines.Text := Prop.Value;
+    Editor.SelectAll;
+    Editor.SetFocus;
+
+    if DialogForm.ShowModal <> mrOK then
+      Exit;
+
+    OldValue := Prop.Value;
+    NewValue := Editor.Lines.Text;
+    { TMemo.Lines.Text carries a trailing line ending on some widgetsets.
+      Authored descriptions are plain text values, so remove only that
+      transport artifact while preserving intentional internal line breaks. }
+    while (NewValue <> '') and (NewValue[Length(NewValue)] in [#10, #13]) do
+      Delete(NewValue, Length(NewValue), 1);
+    if NewValue = OldValue then
+      Exit;
+
+    Accept := False;
+    if Assigned(FOnPropertyChanged) then
+      FOnPropertyChanged(Self, Prop, OldValue, NewValue, Accept);
+    if Accept then
+    begin
+      Prop.Value := NewValue;
+      SyncInspector;
+    end;
+  finally
+    DialogForm.Free;
+  end;
 end;
 
 procedure TWWPropertyEditor.ValueComboExit(Sender: TObject);
