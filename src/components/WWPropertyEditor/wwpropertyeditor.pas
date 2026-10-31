@@ -471,7 +471,10 @@ begin
     Editor.WordWrap := True;
     Editor.Lines.Text := Prop.Value;
     Editor.SelectAll;
-    Editor.SetFocus;
+    { Do not call SetFocus before ShowModal. GTK2 rejects focus requests for
+      controls whose containing form is not yet visible. As the dialog's main
+      client control, the memo naturally receives the initial keyboard focus
+      once the modal form is activated. }
 
     if DialogForm.ShowModal <> mrOK then
       Exit;
