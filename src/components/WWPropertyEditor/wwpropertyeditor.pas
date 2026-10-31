@@ -160,7 +160,7 @@ var
   Category: string;
   CategorySeen: Boolean;
   HeaderPanel, CategoryPanel, RowPanel: TPanel;
-  HeaderPropertyLabel, HeaderValueLabel, NameLabel: TLabel;
+  HeaderPropertyCell, HeaderValueCell, NameCell: TPanel;
   ValueEdit: TEdit;
 begin
   { Rows are rebuilt from metadata. They are disposable views; no authored
@@ -183,24 +183,25 @@ begin
   HeaderPanel.BevelOuter := bvNone;
   HeaderPanel.Caption := '';
 
-  { Labels are parented directly to one header surface. Their explicit bounds
-    avoid panel alignment/anchoring interactions under GTK2. }
-  HeaderPropertyLabel := TLabel.Create(HeaderPanel);
-  HeaderPropertyLabel.Parent := HeaderPanel;
-  HeaderPropertyLabel.AutoSize := False;
-  HeaderPropertyLabel.SetBounds(8, 4, Divider - 12, 20);
-  HeaderPropertyLabel.Caption := 'Property';
-  HeaderPropertyLabel.Font.Style := [fsBold];
-  HeaderPropertyLabel.BringToFront;
+  { GTK2 did not reliably paint dynamically created TLabels on these
+    runtime panels. Use the panel captions themselves, as category captions
+    already render reliably on the same widgetset. }
+  HeaderPropertyCell := TPanel.Create(HeaderPanel);
+  HeaderPropertyCell.Parent := HeaderPanel;
+  HeaderPropertyCell.SetBounds(0, 0, Divider, HeaderPanel.ClientHeight);
+  HeaderPropertyCell.Alignment := taLeftJustify;
+  HeaderPropertyCell.Caption := '  Property';
+  HeaderPropertyCell.Font.Style := [fsBold];
+  HeaderPropertyCell.BevelOuter := bvNone;
 
-  HeaderValueLabel := TLabel.Create(HeaderPanel);
-  HeaderValueLabel.Parent := HeaderPanel;
-  HeaderValueLabel.AutoSize := False;
-  HeaderValueLabel.SetBounds(Divider + 8, 4,
-    HeaderPanel.ClientWidth - Divider - 12, 20);
-  HeaderValueLabel.Caption := 'Value';
-  HeaderValueLabel.Font.Style := [fsBold];
-  HeaderValueLabel.BringToFront;
+  HeaderValueCell := TPanel.Create(HeaderPanel);
+  HeaderValueCell.Parent := HeaderPanel;
+  HeaderValueCell.SetBounds(Divider, 0,
+    HeaderPanel.ClientWidth - Divider, HeaderPanel.ClientHeight);
+  HeaderValueCell.Alignment := taLeftJustify;
+  HeaderValueCell.Caption := '  Value';
+  HeaderValueCell.Font.Style := [fsBold];
+  HeaderValueCell.BevelOuter := bvNone;
   Inc(TopPos, HeaderPanel.Height);
 
   for I := 0 to FProperties.Count - 1 do
@@ -251,13 +252,14 @@ begin
         RowPanel.BevelOuter := bvNone;
         RowPanel.Caption := '';
 
-        NameLabel := TLabel.Create(RowPanel);
-        NameLabel.Parent := RowPanel;
-        NameLabel.SetBounds(8, 7, Divider - 12, 22);
-        NameLabel.AutoSize := False;
-        NameLabel.Caption := FProperties[J].Name;
-        NameLabel.Tag := J + 1;
-        NameLabel.OnClick := @NameLabelClick;
+        NameCell := TPanel.Create(RowPanel);
+        NameCell.Parent := RowPanel;
+        NameCell.SetBounds(0, 0, Divider, RowPanel.ClientHeight);
+        NameCell.Alignment := taLeftJustify;
+        NameCell.Caption := '  ' + FProperties[J].Name;
+        NameCell.BevelOuter := bvNone;
+        NameCell.Tag := J + 1;
+        NameCell.OnClick := @NameLabelClick;
 
         ValueEdit := TEdit.Create(RowPanel);
         ValueEdit.Parent := RowPanel;
@@ -282,10 +284,12 @@ var
   Index, I: Integer;
   ParentRow: TWinControl;
 begin
-  { Clicking the property name transfers keyboard focus to the value control,
+  { Property-name cells are captioned panels because GTK2 reliably paints
+    their text where dynamic TLabels were disappearing. Clicking a name still
+    transfers keyboard focus to the value control,
     matching Lazarus/Delphi Object Inspector behavior. }
-  Index := TLabel(Sender).Tag;
-  ParentRow := TLabel(Sender).Parent;
+  Index := TPanel(Sender).Tag;
+  ParentRow := TPanel(Sender).Parent;
   for I := 0 to ParentRow.ControlCount - 1 do
     if (ParentRow.Controls[I] is TEdit) and
       (TEdit(ParentRow.Controls[I]).Tag = Index) then
