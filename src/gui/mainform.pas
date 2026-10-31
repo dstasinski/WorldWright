@@ -105,9 +105,9 @@ begin
 end;
 
 { Return the author-facing object label used by the World Tree. Tag is the
-  complete player-facing phrase when present, so it replaces Name in this
-  projection rather than being prepended to it. Tagged labels also expose the
-  stable ID because authors commonly need that exact builder reference. }
+  descriptive player-facing noun phrase when present, so it replaces Name in
+  this projection. Articles are prose grammar and are not shown in the authoring
+  tree. Tagged labels expose the stable ID for exact builder references. }
 function TWorldWrightMainForm.ObjectTreeLabel(AObject: TWorldObject): string;
 begin
   if Trim(AObject.Tag) <> '' then
@@ -227,9 +227,8 @@ begin
   Accept := False;
 
   { Property metadata identifies semantics by stable ID rather than caption.
-    This first editing slice deliberately enables only Name; Tag and
-    Description remain displayed as text-kind metadata but will receive their
-    own model-backed handlers in subsequent slices. }
+    MainForm is the semantic adapter: the reusable inspector never needs to
+    know which WorldWright entity class owns a displayed value. }
   if (WorldTree.Selected = nil) or (WorldTree.Selected.Data = nil) then
     Exit;
 
@@ -342,7 +341,7 @@ begin
     PropertyEditor.AddProperty('kind', 'Kind', 'Object', wpkReadOnly, 'Identity');
     PropertyEditor.AddProperty('tag', 'Tag', SelectedObject.Tag, wpkText, 'Appearance');
     PropertyEditor.AddProperty('description', 'Description',
-      SelectedObject.Description, wpkText, 'Appearance');
+      SelectedObject.Description, wpkDialog, 'Appearance');
 
     { Show both authored and runtime location explicitly. The authored initial
       value is what persistence/export uses; the runtime value is disposable
@@ -379,7 +378,7 @@ begin
   PropertyEditor.AddProperty('id', 'ID', SelectedRoom.ID, wpkReadOnly, 'Identity');
   PropertyEditor.AddProperty('kind', 'Kind', 'Room', wpkReadOnly, 'Identity');
   PropertyEditor.AddProperty('description', 'Description',
-    SelectedRoom.Description, wpkText, 'Appearance');
+    SelectedRoom.Description, wpkDialog, 'Appearance');
   finally
     PropertyEditor.EndUpdate;
   end;
