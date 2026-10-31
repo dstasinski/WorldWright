@@ -85,6 +85,7 @@ type
     procedure SetProperties(AValue: TWWPropertyItems);
     procedure SyncInspector;
     procedure ValueEditExit(Sender: TObject);
+    procedure ValueEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure ValueComboExit(Sender: TObject);
     procedure DialogButtonClick(Sender: TObject);
     procedure EventValueClick(Sender: TObject);
@@ -290,7 +291,7 @@ begin
           ValueEdit.Text := FProperties[J].Value;
           ValueEdit.Tag := J + 1;
           ValueEdit.ReadOnly := True;
-          ValueEdit.OnClick := @EventValueClick;
+          ValueEdit.OnDblClick := @EventValueClick;
         end
         else if FProperties[J].Kind = wpkDialog then
         begin
@@ -347,7 +348,10 @@ begin
           if ValueEdit.ReadOnly then
             ValueEdit.Font.Color := clGrayText
           else
+          begin
             ValueEdit.OnExit := @ValueEditExit;
+            ValueEdit.OnKeyDown := @ValueEditKeyDown;
+          end;
         end;
 
         Inc(TopPos, RowPanel.Height);
@@ -373,6 +377,19 @@ begin
       TEdit(ParentRow.Controls[I]).SetFocus;
       Exit;
     end;
+end;
+
+procedure TWWPropertyEditor.ValueEditKeyDown(Sender: TObject;
+  var Key: Word; Shift: TShiftState);
+begin
+  { Enter is an explicit commit gesture for single-line properties. Calling
+    the same commit path as focus loss keeps host/model behavior identical and
+    lets tree projections update without requiring the author to click away. }
+  if (Key = 13) and (Shift = []) then
+  begin
+    ValueEditExit(Sender);
+    Key := 0;
+  end;
 end;
 
 procedure TWWPropertyEditor.ValueEditExit(Sender: TObject);
