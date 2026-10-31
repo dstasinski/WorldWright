@@ -238,23 +238,51 @@ begin
 end;
 
 procedure TWorldWrightMainForm.OpenRuleEditor(ARule: TWorldRule);
+var
+  I: Integer;
+  Condition: TWorldCondition;
+  Action: TWorldAction;
+  OperatorText, ActionText: string;
 begin
   if ARule = nil then
     Exit;
 
-  { Stage 1 Rule Editor lives in the central workspace. It deliberately shows
-    only neutral WorldWright identity plus the two semantic sections that will
-    gain structured editors next. No Pascal, Inform, or TADS source belongs
-    here. }
+  { The first Rule Editor view is model-backed and read-only. Showing the real
+    ordered semantic lists now keeps the workspace truthful while mutation
+    controls are introduced separately. No exporter-specific source is shown. }
   WorkspaceMemo.Clear;
   WorkspaceMemo.Lines.Add('RULE: ' + ARule.Name);
   WorkspaceMemo.Lines.Add('ID: ' + ARule.ID);
   WorkspaceMemo.Lines.Add('');
   WorkspaceMemo.Lines.Add('Conditions');
-  WorkspaceMemo.Lines.Add('  (none)');
+  if ARule.Conditions.Count = 0 then
+    WorkspaceMemo.Lines.Add('  (none)')
+  else
+    for I := 0 to ARule.Conditions.Count - 1 do
+    begin
+      Condition := ARule.Conditions[I];
+      case Condition.Kind of
+        wckEquals: OperatorText := '=';
+        wckNotEquals: OperatorText := '<>';
+      end;
+      WorkspaceMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' +
+        Condition.LeftOperand + ' ' + OperatorText + ' ' +
+        Condition.RightOperand);
+    end;
+
   WorkspaceMemo.Lines.Add('');
   WorkspaceMemo.Lines.Add('Actions');
-  WorkspaceMemo.Lines.Add('  (none)');
+  if ARule.Actions.Count = 0 then
+    WorkspaceMemo.Lines.Add('  (none)')
+  else
+    for I := 0 to ARule.Actions.Count - 1 do
+    begin
+      Action := ARule.Actions[I];
+      case Action.Kind of
+        wakSay: ActionText := 'Say "' + Action.Value + '"';
+      end;
+      WorkspaceMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' + ActionText);
+    end;
 end;
 
 procedure TWorldWrightMainForm.PropertyEditorPropertyActivated(
