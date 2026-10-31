@@ -241,7 +241,7 @@ procedure TWorldWrightMainForm.OpenRuleEditor(ARule: TWorldRule);
 var
   I: Integer;
   Condition: TWorldCondition;
-  Action: TWorldAction;
+  RuleAction: TWorldAction;
   OperatorText, ActionText: string;
 begin
   if ARule = nil then
@@ -277,9 +277,9 @@ begin
   else
     for I := 0 to ARule.Actions.Count - 1 do
     begin
-      Action := ARule.Actions[I];
-      case Action.Kind of
-        wakSay: ActionText := 'Say "' + Action.Value + '"';
+      RuleAction := ARule.Actions[I];
+      case RuleAction.Kind of
+        wakSay: ActionText := 'Say "' + RuleAction.Value + '"';
       end;
       WorkspaceMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' + ActionText);
     end;
