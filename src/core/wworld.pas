@@ -201,6 +201,9 @@ begin
   inherited Create(AID, AName);
   FExits := TWorldExitList.Create(True);
   FEvents := TWorldEventBindingList.Create(True);
+  FEvents.Add(TWorldEventBinding.Create('OnEnter'));
+  FEvents.Add(TWorldEventBinding.Create('OnExit'));
+  FEvents.Add(TWorldEventBinding.Create('OnLook'));
 end;
 
 destructor TWorldRoom.Destroy;
@@ -244,6 +247,10 @@ begin
   FRoom := ARoom;
   FLocationKind := olRoom;
   FEvents := TWorldEventBindingList.Create(True);
+  FEvents.Add(TWorldEventBinding.Create('OnExamine'));
+  FEvents.Add(TWorldEventBinding.Create('OnTake'));
+  FEvents.Add(TWorldEventBinding.Create('OnDrop'));
+  FEvents.Add(TWorldEventBinding.Create('OnUse'));
 end;
 
 destructor TWorldObject.Destroy;
