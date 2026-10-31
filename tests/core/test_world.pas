@@ -33,6 +33,12 @@ begin
     Laboratory.Events[0].RuleID := Rule.ID;
     Check(Laboratory.Events[0].RuleID = 'laboratory_enter',
       'event binding did not retain stable rule ID');
+    Check(FindEventBinding(Laboratory.Events, 'OnEnter') = Laboratory.Events[0],
+      'event binding lookup failed');
+    Check(FindEventBinding(Laboratory.Events, 'onenter') = Laboratory.Events[0],
+      'event binding lookup should be case insensitive');
+    Check(FindEventBinding(Laboratory.Events, 'OnMissing') = nil,
+      'unknown event binding should not resolve');
     Laboratory.Description :=
       'A dusty laboratory filled with abandoned equipment.';
     Hallway := World.AddRoom('hallway', 'Hallway');
