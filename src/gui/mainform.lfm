@@ -94,14 +94,23 @@ object WorldWrightMainForm: TWorldWrightMainForm
       ClientWidth = 590
       TabOrder = 2
       Visible = False
-      object AddRuleActionButton: TButton
+      object AddRuleConditionButton: TButton
         Left = 8
+        Height = 32
+        Top = 5
+        Width = 145
+        Caption = 'Add Condition...'
+        OnClick = AddRuleConditionButtonClick
+        TabOrder = 0
+      end
+      object AddRuleActionButton: TButton
+        Left = 161
         Height = 32
         Top = 5
         Width = 120
         Caption = 'Add Action...'
         OnClick = AddRuleActionButtonClick
-        TabOrder = 0
+        TabOrder = 1
       end
     end
     object CommandPanel: TPanel
