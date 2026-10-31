@@ -176,29 +176,25 @@ Example:
 
 **Syntax:** `@TAG <object> <tag>`
 
-Sets the complete player-facing tag phrase for an object. The tag is independent
-of the object's authoring name and stable ID, and is not automatically combined
-with the object name. The object reference follows the same current-room rules as
-`@DESCRIBEOBJECT`; use the stable ID when duplicate names make the reference
-ambiguous.
+Sets the player-facing descriptive noun phrase for an object. The tag normally
+omits the indefinite article: write `little brass key`, not `a little brass
+key`. WorldWright uses the tag instead of the authoring Name in descriptive
+prose and supplies `a` or `an` using its current grammar rule.
 
-Example:
+The tag remains an exact alternate player reference. For example:
 
 ```text
-@TAG brass_key a little brass key
-@TAG brass_key_2 a shiny brass key
+@TAG brass_key little brass key
+@TAG apple old apple
 ```
 
-A later ambiguous player command can then present the authored phrases directly,
-such as `a little brass key` and `a shiny brass key`. If a tag has not been
-authored, the prompt falls back to temporary numbered labels such as
-`brass key #1` and `brass key #2`.
+Room prose can then say `a little brass key` or `an old apple`, while player
+commands use the authored tag itself, such as `TAKE little brass key` or
+`EXAMINE old apple`. Matching is exact, not fuzzy or partial.
 
-Tag also provides an exact alternate player reference. For example, an object
-whose authoring name is `brass_key` may have the complete tag `a little brass
-key`; the player may then use `TAKE a little brass key`, `EXAMINE a little
-brass key`, or, while carrying it, `DROP a little brass key`. This is exact
-phrase matching, not fuzzy or partial matching.
+When duplicate display names require a numbered choice, WorldWright shows the
+authored tag as the distinguishing noun phrase. If no tag exists, it falls back
+to a temporary `name #N` label.
 
 ### @DESCRIBEOBJECT
 
@@ -222,8 +218,8 @@ Example:
 WorldWright's object-command behavior follows this rule:
 
 1. A stable ID identifies exactly one object.
-2. An exact authored tag phrase identifies a matching object in the command's
-   applicable scope. Tag is a complete phrase and is not combined with Name.
+2. An exact authored tag identifies a matching object in the command's
+   applicable scope. Tag is a descriptive noun phrase and is not combined with Name.
 3. A display name may identify an object when exactly one matching candidate is
    in the command's applicable scope.
 4. Multiple matching names are ambiguous; commands must never silently choose
