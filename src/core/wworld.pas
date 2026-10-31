@@ -75,6 +75,9 @@ type
 
   TWorldEventBindingList = specialize TObjectList<TWorldEventBinding>;
 
+  function FindEventBinding(AEvents: TWorldEventBindingList;
+    const AEventName: string): TWorldEventBinding;
+
 
 
   { TWorldRoom is the first concrete world entity. }
@@ -185,6 +188,19 @@ begin
     raise EArgumentNilException.Create('ADestination');
   FDirection := ADirection;
   FDestination := ADestination;
+end;
+
+function FindEventBinding(AEvents: TWorldEventBindingList;
+  const AEventName: string): TWorldEventBinding;
+var
+  Binding: TWorldEventBinding;
+begin
+  Result := nil;
+  if AEvents = nil then
+    Exit;
+  for Binding in AEvents do
+    if SameText(Binding.EventName, Trim(AEventName)) then
+      Exit(Binding);
 end;
 
 constructor TWorldEventBinding.Create(const AEventName: string);
