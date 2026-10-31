@@ -48,6 +48,7 @@ type
     function ResolveVisibleObject(ARoom: TWorldRoom; const ANameOrID: string;
       out AObject: TWorldObject): TObjectResolveStatus;
     function ObjectDisplayPhrase(AObject: TWorldObject): string;
+    function FormatEnglishList(AItems: TStrings): string;
     function DescribeCurrentRoom: string;
     function Move(ADirection: TWorldDirection): string;
     function Examine(const ANounPhrase: string): string;
@@ -299,9 +300,30 @@ begin
     Result := 'a ' + Phrase;
 end;
 
+function TGameSession.FormatEnglishList(AItems: TStrings): string;
+var
+  I: Integer;
+begin
+  { Player-facing lists use ordinary English conjunctions. Three or more items
+    use the Oxford comma so the final item is unambiguously separated. }
+  case AItems.Count of
+    0: Result := '';
+    1: Result := AItems[0];
+    2: Result := AItems[0] + ' and ' + AItems[1];
+  else
+    begin
+      Result := AItems[0];
+      for I := 1 to AItems.Count - 2 do
+        Result := Result + ', ' + AItems[I];
+      Result := Result + ', and ' + AItems[AItems.Count - 1];
+    end;
+  end;
+end;
+
 function TGameSession.DescribeCurrentRoom: string;
 var
   WorldObject: TWorldObject;
+  ObjectPhrases: TStringList;
   ObjectsText: string;
 begin
   if FCurrentRoom = nil then
@@ -311,16 +333,18 @@ begin
   if Trim(FCurrentRoom.Description) <> '' then
     Result := Result + LineEnding + FCurrentRoom.Description;
 
-  { Room contents are derived from the world's object collection rather than
-    cached on the room, keeping one authoritative location reference. }
-  ObjectsText := '';
-  for WorldObject in FWorld.Objects do
-    if ObjectIsInRoom(WorldObject, FCurrentRoom) then
-    begin
-      if ObjectsText <> '' then
-        ObjectsText := ObjectsText + ', ';
-      ObjectsText := ObjectsText + ObjectDisplayPhrase(WorldObject);
-    end;
+  { Collect first, then format once so punctuation and conjunctions depend on
+    the complete list rather than on incidental iteration position. }
+  ObjectPhrases := TStringList.Create;
+  try
+    for WorldObject in FWorld.Objects do
+      if ObjectIsInRoom(WorldObject, FCurrentRoom) then
+        ObjectPhrases.Add(ObjectDisplayPhrase(WorldObject));
+    ObjectsText := FormatEnglishList(ObjectPhrases);
+  finally
+    ObjectPhrases.Free;
+  end;
+
   if ObjectsText <> '' then
     Result := Result + LineEnding + 'You can see ' + ObjectsText + ' here.';
 end;
