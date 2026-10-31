@@ -57,6 +57,9 @@ type
     AProperty: TWWPropertyItem; const AOldValue, ANewValue: string;
     var Accept: Boolean) of object;
 
+  TWWPropertyActivatedEvent = procedure(Sender: TObject;
+    AProperty: TWWPropertyItem) of object;
+
   { TWWPropertyEditor is a purpose-built Object Inspector surface.
 
     Earlier versions used TStringGrid. That made category rows, focus routing,
@@ -74,6 +77,7 @@ type
     FEventsBox: TScrollBox;
     FProperties: TWWPropertyItems;
     FOnPropertyChanged: TWWPropertyChangedEvent;
+    FOnPropertyActivated: TWWPropertyActivatedEvent;
     FDividerPercent: Integer;
     FUpdateCount: Integer;
     procedure BuildPage(ABox: TScrollBox; AEvents: Boolean);
@@ -83,6 +87,7 @@ type
     procedure ValueEditExit(Sender: TObject);
     procedure ValueComboExit(Sender: TObject);
     procedure DialogButtonClick(Sender: TObject);
+    procedure EventValueClick(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -108,6 +113,8 @@ type
     property Visible;
     property OnPropertyChanged: TWWPropertyChangedEvent
       read FOnPropertyChanged write FOnPropertyChanged;
+    property OnPropertyActivated: TWWPropertyActivatedEvent
+      read FOnPropertyActivated write FOnPropertyActivated;
   end;
 
 implementation
@@ -270,7 +277,22 @@ begin
         NameCell.Tag := J + 1;
         NameCell.OnClick := @NameLabelClick;
 
-        if FProperties[J].Kind = wpkDialog then
+        if FProperties[J].Kind = wpkEvent then
+        begin
+          { Event values are activation surfaces rather than inline text.
+            The host decides whether activation creates or opens the neutral
+            rule; the reusable inspector remains model-independent. }
+          ValueEdit := TEdit.Create(RowPanel);
+          ValueEdit.Parent := RowPanel;
+          ValueEdit.SetBounds(Divider, 3,
+            RowPanel.ClientWidth - Divider - 4, 27);
+          ValueEdit.Anchors := [akLeft, akTop, akRight];
+          ValueEdit.Text := FProperties[J].Value;
+          ValueEdit.Tag := J + 1;
+          ValueEdit.ReadOnly := True;
+          ValueEdit.OnClick := @EventValueClick;
+        end
+        else if FProperties[J].Kind = wpkDialog then
         begin
           { Dialog properties show a compact read-only preview plus an ellipsis
             button. The modal editor owns only a temporary string; accepted
@@ -383,6 +405,19 @@ begin
     Prop.Value := NewValue
   else
     Edit.Text := OldValue;
+end;
+
+procedure TWWPropertyEditor.EventValueClick(Sender: TObject);
+var
+  Index: Integer;
+  Prop: TWWPropertyItem;
+begin
+  Index := TEdit(Sender).Tag - 1;
+  if (Index < 0) or (Index >= FProperties.Count) then
+    Exit;
+  Prop := FProperties[Index];
+  if (Prop.Kind = wpkEvent) and Assigned(FOnPropertyActivated) then
+    FOnPropertyActivated(Self, Prop);
 end;
 
 procedure TWWPropertyEditor.DialogButtonClick(Sender: TObject);
