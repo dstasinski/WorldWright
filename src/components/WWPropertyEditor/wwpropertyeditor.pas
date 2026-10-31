@@ -5,12 +5,12 @@ unit WWPropertyEditor;
 interface
 
 uses
-  Classes, SysUtils, Controls, Grids, ComCtrls, Graphics;
+  Classes, SysUtils, Controls, ComCtrls, ExtCtrls, StdCtrls, Graphics;
 
 type
-  { TWWPropertyKind identifies the editor semantics of a property independently
-    of its displayed text. More kinds can be added without coupling this
-    component to WorldWright's world model. }
+  { Editor capabilities are deliberately independent of WorldWright model
+    classes. Hosts describe how a value should be edited; this component only
+    supplies the corresponding authoring UI. }
   TWWPropertyKind = (
     wpkReadOnly,
     wpkText,
@@ -22,9 +22,6 @@ type
     wpkEvent
   );
 
-  { TWWPropertyItem is one row of property metadata. ID is a stable,
-    non-visual key supplied by the host; Name is the author-facing caption.
-    The collection owns its items. }
   TWWPropertyItem = class(TCollectionItem)
   private
     FID: string;
@@ -49,49 +46,33 @@ type
     property Items[AIndex: Integer]: TWWPropertyItem read GetItem; default;
   end;
 
-  { The host validates proposed edits because only it understands model
-    semantics. Set Accept False to reject the edit and restore the old value. }
   TWWPropertyChangedEvent = procedure(Sender: TObject;
     AProperty: TWWPropertyItem; const AOldValue, ANewValue: string;
     var Accept: Boolean) of object;
 
-  { TWWPropertyEditor is a reusable Lazarus/Delphi-style property inspector.
-    It owns property metadata and presents it through a two-column grid.
-    Model objects are deliberately unknown to this control: the host populates
-    Properties and later receives edits through OnPropertyChanged.
+  { TWWPropertyEditor is a purpose-built Object Inspector surface.
 
-    Event-valued rows use wpkEvent as a presentation/editing contract only;
-    the component does not know what an event means or what model owns it.
-
-    Each TWWPropertyKind describes an editing capability rather than a world
-    model type. Text uses controlled inline editing today; Boolean, enum,
-    reference, structured, dialog, and event kinds are neutral contracts for
-    dedicated editors added incrementally. The host must accept proposed model
-    changes through OnPropertyChanged, keeping this control presentation-only.
-    Read-only/category cells never enter an inline editor. }
+    Earlier versions used TStringGrid. That made category rows, focus routing,
+    and per-type editors depend on grid internals and widgetset-specific
+    painting. The inspector now owns explicit rows instead: category rows are
+    genuinely single-column controls, while property rows contain a name label
+    and a separate value control. This mirrors the useful interaction model of
+    Lazarus's Object Inspector without coupling WorldWright to IDE RTTI. }
   TWWPropertyEditor = class(TCustomControl)
   private
     FPageControl: TPageControl;
     FPropertiesTab: TTabSheet;
     FEventsTab: TTabSheet;
-    FGrid: TStringGrid;
-    FEventsGrid: TStringGrid;
+    FPropertiesBox: TScrollBox;
+    FEventsBox: TScrollBox;
     FProperties: TWWPropertyItems;
     FOnPropertyChanged: TWWPropertyChangedEvent;
-    procedure ConfigureGrid(AGrid: TStringGrid);
-    function PropertyForGridRow(AGrid: TStringGrid;
-      ARow: Integer): TWWPropertyItem;
-    procedure GridClick(Sender: TObject);
-    procedure GridDrawCell(Sender: TObject; ACol, ARow: Integer;
-      ARect: TRect; AState: TGridDrawState);
-    procedure GridPrepareCanvas(Sender: TObject; ACol, ARow: Integer;
-      AState: TGridDrawState);
-    procedure GridValidateEntry(Sender: TObject; ACol, ARow: Integer;
-      const OldValue: string; var NewValue: string);
+    FDividerPercent: Integer;
+    procedure BuildPage(ABox: TScrollBox; AEvents: Boolean);
+    procedure NameLabelClick(Sender: TObject);
     procedure SetProperties(AValue: TWWPropertyItems);
-    procedure SyncGrid;
-  protected
-    procedure Resize; override;
+    procedure SyncInspector;
+    procedure ValueEditExit(Sender: TObject);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -138,10 +119,8 @@ constructor TWWPropertyEditor.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FProperties := TWWPropertyItems.Create(Self);
+  FDividerPercent := 48;
 
-  { Keep the inspector's permanent visual structure inside the reusable
-    component. Hosts see one control, while authors get the familiar
-    Properties/Events split used by Lazarus and Delphi inspectors. }
   FPageControl := TPageControl.Create(Self);
   FPageControl.Parent := Self;
   FPageControl.Align := alClient;
@@ -154,250 +133,59 @@ begin
   FEventsTab.PageControl := FPageControl;
   FEventsTab.Caption := 'Events';
 
-  FGrid := TStringGrid.Create(FPropertiesTab);
-  FGrid.Parent := FPropertiesTab;
-  ConfigureGrid(FGrid);
-  FGrid.OnValidateEntry := @GridValidateEntry;
+  FPropertiesBox := TScrollBox.Create(FPropertiesTab);
+  FPropertiesBox.Parent := FPropertiesTab;
+  FPropertiesBox.Align := alClient;
+  FPropertiesBox.BorderStyle := bsNone;
 
-  FEventsGrid := TStringGrid.Create(FEventsTab);
-  FEventsGrid.Parent := FEventsTab;
-  ConfigureGrid(FEventsGrid);
-  { Event editing/opening is deliberately deferred until neutral rule objects
-    exist. The tab is real now so future event support does not require another
-    inspector-layout replacement. }
-  FEventsGrid.Options := FEventsGrid.Options - [goEditing];
+  FEventsBox := TScrollBox.Create(FEventsTab);
+  FEventsBox.Parent := FEventsTab;
+  FEventsBox.Align := alClient;
+  FEventsBox.BorderStyle := bsNone;
 
   Width := 280;
   Height := 200;
-  SyncGrid;
+  SyncInspector;
 end;
 
 destructor TWWPropertyEditor.Destroy;
 begin
-  { FGrid is owned by Self through the LCL component ownership mechanism. }
   FProperties.Free;
   inherited Destroy;
 end;
 
-procedure TWWPropertyEditor.ConfigureGrid(AGrid: TStringGrid);
-begin
-  AGrid.Align := alClient;
-  AGrid.ColCount := 2;
-  AGrid.FixedCols := 0;
-  AGrid.FixedRows := 1;
-  AGrid.RowCount := 1;
-  { Horizontal rules retain row structure. Vertical rules are drawn explicitly
-    for real property rows so category headings can genuinely span both
-    columns without a misleading divider through the heading. }
-  AGrid.Options := [goFixedHorzLine, goHorzLine, goRangeSelect,
-    goSmoothScroll, goEditing];
-  AGrid.Cells[0, 0] := 'Property';
-  AGrid.Cells[1, 0] := 'Value';
-  AGrid.TabStop := True;
-  AGrid.OnClick := @GridClick;
-  AGrid.OnDrawCell := @GridDrawCell;
-  AGrid.OnPrepareCanvas := @GridPrepareCanvas;
-end;
-
-function TWWPropertyEditor.PropertyForGridRow(AGrid: TStringGrid;
-  ARow: Integer): TWWPropertyItem;
+procedure TWWPropertyEditor.BuildPage(ABox: TScrollBox; AEvents: Boolean);
 var
-  I: Integer;
-  WantedName, WantedValue: string;
-begin
-  Result := nil;
-  if (ARow < 1) or (ARow >= AGrid.RowCount) then
-    Exit;
-
-  WantedName := Trim(AGrid.Cells[0, ARow]);
-  WantedValue := AGrid.Cells[1, ARow];
-
-  { Category rows are identified structurally: their first-column caption is a
-    category name and no property has that displayed name in the row. Empty
-    property values are valid and must still map to their metadata. }
-  for I := 0 to FProperties.Count - 1 do
-    if (FProperties[I].Kind = wpkEvent) = (AGrid = FEventsGrid) then
-      if SameText(FProperties[I].Name, WantedName) and
-        (FProperties[I].Value = WantedValue) then
-      begin
-        Result := FProperties[I];
-        Exit;
-      end;
-end;
-
-procedure TWWPropertyEditor.GridClick(Sender: TObject);
-var
-  Grid: TStringGrid;
-  Prop: TWWPropertyItem;
-begin
-  Grid := TStringGrid(Sender);
-  Prop := PropertyForGridRow(Grid, Grid.Row);
-
-  { Property names are labels, not independent focus targets. Selecting one
-    moves the active cell to its Value partner, matching Object Inspector
-    behavior and making keyboard editing immediately useful. Category rows
-    remain section headers and do not redirect into a nonexistent value. }
-  if (Prop <> nil) and (Grid.Col = 0) then
-    Grid.Col := 1;
-end;
-
-procedure TWWPropertyEditor.GridDrawCell(Sender: TObject;
-  ACol, ARow: Integer; ARect: TRect; AState: TGridDrawState);
-var
-  Grid: TStringGrid;
-  Prop: TWWPropertyItem;
-  FullRect: TRect;
-  CategoryCaption: string;
-begin
-  Grid := TStringGrid(Sender);
-  if ARow = 0 then
-    Exit;
-
-  Prop := PropertyForGridRow(Grid, ARow);
-  if Prop <> nil then
-  begin
-    { With global vertical grid lines disabled, draw the property/value divider
-      only on actual property rows. This preserves the familiar two-column
-      inspector while category rows remain visually full width. }
-    if ACol = 0 then
-    begin
-      Grid.Canvas.Pen.Color := clBtnShadow;
-      Grid.Canvas.MoveTo(ARect.Right - 1, ARect.Top);
-      Grid.Canvas.LineTo(ARect.Right - 1, ARect.Bottom);
-    end;
-    Exit;
-  end;
-
-  { Category headings are one logical section header. Repaint the complete
-    logical row from either cell so TStringGrid selection/focus painting cannot
-    reveal a phantom Value cell after our custom drawing. }
-  FullRect := Grid.CellRect(0, ARow);
-  FullRect.Right := Grid.CellRect(1, ARow).Right;
-  Grid.Canvas.Brush.Color := clBtnFace;
-  Grid.Canvas.FillRect(FullRect);
-  Grid.Canvas.Font.Style := [fsBold];
-  CategoryCaption := Grid.Cells[0, ARow];
-  Grid.Canvas.TextOut(FullRect.Left + 4, FullRect.Top +
-    (FullRect.Bottom - FullRect.Top - Grid.Canvas.TextHeight(CategoryCaption)) div 2,
-    CategoryCaption);
-end;
-
-procedure TWWPropertyEditor.GridPrepareCanvas(Sender: TObject;
-  ACol, ARow: Integer; AState: TGridDrawState);
-var
-  Grid: TStringGrid;
-  Prop: TWWPropertyItem;
-begin
-  Grid := TStringGrid(Sender);
-  if ARow = 0 then
-    Exit;
-
-  Prop := PropertyForGridRow(Grid, ARow);
-  if Prop = nil then
-  begin
-    { Category headings are structural rows. Bold text gives the inspector the
-      familiar Object Inspector hierarchy without pretending categories are
-      editable properties. }
-    Grid.Canvas.Font.Style := [fsBold];
-    Grid.Canvas.Brush.Color := clBtnFace;
-    Exit;
-  end;
-
-  if Prop.Kind = wpkReadOnly then
-    Grid.Canvas.Font.Color := clGrayText;
-end;
-
-procedure TWWPropertyEditor.GridValidateEntry(Sender: TObject;
-  ACol, ARow: Integer; const OldValue: string; var NewValue: string);
-var
-  Accept: Boolean;
-  Prop: TWWPropertyItem;
-begin
-  { Only value cells backed by wpkText are editable. TStringGrid supplies one
-    editor for the grid, so validation is the final authority that prevents
-    property names and protected values from becoming UI-only state. }
-  if ACol <> 1 then
-  begin
-    NewValue := OldValue;
-    Exit;
-  end;
-
-  Prop := PropertyForGridRow(FGrid, ARow);
-  if Prop = nil then
-  begin
-    NewValue := OldValue;
-    Exit;
-  end;
-  if Prop.Kind <> wpkText then
-  begin
-    NewValue := OldValue;
-    Exit;
-  end;
-
-  if NewValue = OldValue then
-    Exit;
-
-  { An edit is rejected unless the host explicitly accepts it. This prevents
-    the inspector from ever becoming a second, unsynchronized data model. }
-  Accept := False;
-  if Assigned(FOnPropertyChanged) then
-    FOnPropertyChanged(Self, Prop, OldValue, NewValue, Accept);
-
-  if not Accept then
-    NewValue := OldValue;
-end;
-
-procedure TWWPropertyEditor.SetProperties(AValue: TWWPropertyItems);
-begin
-  if AValue = FProperties then
-    Exit;
-  FProperties.Assign(AValue);
-  SyncGrid;
-end;
-
-procedure TWWPropertyEditor.SyncGrid;
-var
-  I, J: Integer;
+  I, J, TopPos, Divider: Integer;
   Category: string;
   CategorySeen: Boolean;
-
-  procedure AddCategoryRow(AGrid: TStringGrid; const ACategory: string);
-  begin
-    AGrid.RowCount := AGrid.RowCount + 1;
-    AGrid.Cells[0, AGrid.RowCount - 1] := ACategory;
-    AGrid.Cells[1, AGrid.RowCount - 1] := '';
-  end;
-
-  procedure AddItemRow(AGrid: TStringGrid; AItem: TWWPropertyItem);
-  begin
-    AGrid.RowCount := AGrid.RowCount + 1;
-    AGrid.Cells[0, AGrid.RowCount - 1] := '  ' + AItem.Name;
-    AGrid.Cells[1, AGrid.RowCount - 1] := AItem.Value;
-  end;
+  CategoryPanel, RowPanel: TPanel;
+  NameLabel: TLabel;
+  ValueEdit: TEdit;
 begin
-  if FGrid = nil then
-    Exit;
+  { Rows are rebuilt from metadata. They are disposable views; no authored
+    state is stored in the controls themselves. }
+  while ABox.ControlCount > 0 do
+    ABox.Controls[0].Free;
 
-  { Properties and Events are two projections of the same neutral metadata
-    collection. This keeps the host API stable while giving each semantic kind
-    its own Lazarus/Delphi-style inspector tab. }
-  FGrid.RowCount := 1;
-  FEventsGrid.RowCount := 1;
+  TopPos := 0;
+  Divider := (ABox.ClientWidth * FDividerPercent) div 100;
+  if Divider < 80 then
+    Divider := 80;
 
-  { Render each category once, in first-use order, followed by its indented
-    members. Category rows deliberately have no value; they are presentation
-    structure rather than editable property metadata. }
   for I := 0 to FProperties.Count - 1 do
   begin
+    if (FProperties[I].Kind = wpkEvent) <> AEvents then
+      Continue;
+
     Category := Trim(FProperties[I].Category);
     if Category = '' then
       Category := 'General';
 
     CategorySeen := False;
     for J := 0 to I - 1 do
-      if SameText(Trim(FProperties[J].Category), Category) and
-        ((FProperties[J].Kind = wpkEvent) =
-         (FProperties[I].Kind = wpkEvent)) then
+      if ((FProperties[J].Kind = wpkEvent) = AEvents) and
+        SameText(Trim(FProperties[J].Category), Category) then
       begin
         CategorySeen := True;
         Break;
@@ -405,50 +193,127 @@ begin
     if CategorySeen then
       Continue;
 
-    if FProperties[I].Kind = wpkEvent then
-      AddCategoryRow(FEventsGrid, Category)
-    else
-      AddCategoryRow(FGrid, Category);
+    { A category is one real full-width control. There is no hidden or painted
+      second column, so selection and widgetset drawing cannot expose one. }
+    CategoryPanel := TPanel.Create(ABox);
+    CategoryPanel.Parent := ABox;
+    CategoryPanel.SetBounds(0, TopPos, ABox.ClientWidth, 26);
+    CategoryPanel.Anchors := [akLeft, akTop, akRight];
+    CategoryPanel.Alignment := taLeftJustify;
+    CategoryPanel.Caption := '  ' + Category;
+    CategoryPanel.Font.Style := [fsBold];
+    CategoryPanel.BevelOuter := bvNone;
+    CategoryPanel.Color := clBtnFace;
+    CategoryPanel.ParentBackground := False;
+    Inc(TopPos, CategoryPanel.Height);
 
     for J := I to FProperties.Count - 1 do
-      if SameText(Trim(FProperties[J].Category), Category) and
-        ((FProperties[J].Kind = wpkEvent) =
-         (FProperties[I].Kind = wpkEvent)) then
+      if ((FProperties[J].Kind = wpkEvent) = AEvents) and
+        SameText(Trim(FProperties[J].Category), Category) then
       begin
-        if FProperties[J].Kind = wpkEvent then
-          AddItemRow(FEventsGrid, FProperties[J])
-        else
-          AddItemRow(FGrid, FProperties[J]);
-      end;
-  end;
+        RowPanel := TPanel.Create(ABox);
+        RowPanel.Parent := ABox;
+        RowPanel.SetBounds(0, TopPos, ABox.ClientWidth, 30);
+        RowPanel.Anchors := [akLeft, akTop, akRight];
+        RowPanel.BevelOuter := bvNone;
+        RowPanel.Caption := '';
 
-  { Keep a useful Lazarus-style property/value split while respecting the
-    component's actual width. TStringGrid's column boundary can be dragged by
-    the user; Resize intentionally rebalances it only when the whole inspector
-    changes size. }
-  if FGrid.ClientWidth > 80 then
-  begin
-    FGrid.ColWidths[0] := FGrid.ClientWidth div 2;
-    FGrid.ColWidths[1] := FGrid.ClientWidth - FGrid.ColWidths[0] - 1;
-  end;
-  if FEventsGrid.ClientWidth > 80 then
-  begin
-    FEventsGrid.ColWidths[0] := FEventsGrid.ClientWidth div 2;
-    FEventsGrid.ColWidths[1] := FEventsGrid.ClientWidth -
-      FEventsGrid.ColWidths[0] - 1;
+        NameLabel := TLabel.Create(RowPanel);
+        NameLabel.Parent := RowPanel;
+        NameLabel.SetBounds(8, 6, Divider - 12, 22);
+        NameLabel.AutoSize := False;
+        NameLabel.Caption := FProperties[J].Name;
+        NameLabel.Tag := J + 1;
+        NameLabel.OnClick := @NameLabelClick;
+
+        ValueEdit := TEdit.Create(RowPanel);
+        ValueEdit.Parent := RowPanel;
+        ValueEdit.SetBounds(Divider, 2,
+          RowPanel.ClientWidth - Divider - 2, 26);
+        ValueEdit.Anchors := [akLeft, akTop, akRight];
+        ValueEdit.Text := FProperties[J].Value;
+        ValueEdit.Tag := J + 1;
+        ValueEdit.ReadOnly := FProperties[J].Kind <> wpkText;
+        if ValueEdit.ReadOnly then
+          ValueEdit.Font.Color := clGrayText
+        else
+          ValueEdit.OnExit := @ValueEditExit;
+
+        Inc(TopPos, RowPanel.Height);
+      end;
   end;
 end;
 
-procedure TWWPropertyEditor.Resize;
+procedure TWWPropertyEditor.NameLabelClick(Sender: TObject);
+var
+  Index, I: Integer;
+  ParentRow: TWinControl;
 begin
-  inherited Resize;
-  SyncGrid;
+  { Clicking the property name transfers keyboard focus to the value control,
+    matching Lazarus/Delphi Object Inspector behavior. }
+  Index := TLabel(Sender).Tag;
+  ParentRow := TLabel(Sender).Parent;
+  for I := 0 to ParentRow.ControlCount - 1 do
+    if (ParentRow.Controls[I] is TEdit) and
+      (TEdit(ParentRow.Controls[I]).Tag = Index) then
+    begin
+      TEdit(ParentRow.Controls[I]).SetFocus;
+      Exit;
+    end;
+end;
+
+procedure TWWPropertyEditor.ValueEditExit(Sender: TObject);
+var
+  Edit: TEdit;
+  Prop: TWWPropertyItem;
+  Index: Integer;
+  OldValue, NewValue: string;
+  Accept: Boolean;
+begin
+  Edit := TEdit(Sender);
+  Index := Edit.Tag - 1;
+  if (Index < 0) or (Index >= FProperties.Count) then
+    Exit;
+
+  Prop := FProperties[Index];
+  if Prop.Kind <> wpkText then
+    Exit;
+
+  OldValue := Prop.Value;
+  NewValue := Edit.Text;
+  if NewValue = OldValue then
+    Exit;
+
+  Accept := False;
+  if Assigned(FOnPropertyChanged) then
+    FOnPropertyChanged(Self, Prop, OldValue, NewValue, Accept);
+
+  if Accept then
+    Prop.Value := NewValue
+  else
+    Edit.Text := OldValue;
+end;
+
+procedure TWWPropertyEditor.SetProperties(AValue: TWWPropertyItems);
+begin
+  if AValue = FProperties then
+    Exit;
+  FProperties.Assign(AValue);
+  SyncInspector;
+end;
+
+procedure TWWPropertyEditor.SyncInspector;
+begin
+  if (FPropertiesBox = nil) or (FEventsBox = nil) then
+    Exit;
+  BuildPage(FPropertiesBox, False);
+  BuildPage(FEventsBox, True);
 end;
 
 procedure TWWPropertyEditor.Clear;
 begin
   FProperties.Clear;
-  SyncGrid;
+  SyncInspector;
 end;
 
 function TWWPropertyEditor.AddProperty(const AID, AName, AValue: string;
@@ -460,7 +325,7 @@ begin
   Result.Name := AName;
   Result.Value := AValue;
   Result.Kind := AKind;
-  SyncGrid;
+  SyncInspector;
 end;
 
 end.
