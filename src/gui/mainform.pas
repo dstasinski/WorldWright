@@ -295,7 +295,7 @@ begin
     UI. Add the new authored Rule to the existing Rules branch instead. }
   RuleNode := nil;
   for I := 0 to WorldTree.Items.Count - 1 do
-    if WorldTree.Items[I].Data = Rule then
+    if WorldTree.Items[I].Data = Pointer(Rule) then
     begin
       RuleNode := WorldTree.Items[I];
       Break;
