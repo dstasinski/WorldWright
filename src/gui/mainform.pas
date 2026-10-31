@@ -15,6 +15,7 @@ type
     the form. }
   TWorldWrightMainForm = class(TForm)
     AddRuleActionButton: TButton;
+    AddRuleConditionButton: TButton;
     CenterPanel: TPanel;
     CommandMemo: TMemo;
     CommandPanel: TPanel;
@@ -29,6 +30,7 @@ type
     WorkspaceMemo: TMemo;
     WorldTree: TTreeView;
     procedure AddRuleActionButtonClick(Sender: TObject);
+    procedure AddRuleConditionButtonClick(Sender: TObject);
     procedure CommandMemoChange(Sender: TObject);
     procedure CommandMemoKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
@@ -241,6 +243,49 @@ begin
     WorldTree.Selected := SelectedNode;
 
   RefreshInspector;
+end;
+
+procedure TWorldWrightMainForm.AddRuleConditionButtonClick(Sender: TObject);
+var
+  LeftOperand, OperatorText, RightOperand: string;
+  Kind: TWorldConditionKind;
+begin
+  if FCurrentRule = nil then
+    Exit;
+
+  LeftOperand := '';
+  if not InputQuery('Add Condition', 'Left operand:', LeftOperand) then
+    Exit;
+  if Trim(LeftOperand) = '' then
+    Exit;
+
+  OperatorText := '=';
+  if not InputQuery('Add Condition',
+    'Operator (= or <>):', OperatorText) then
+    Exit;
+  OperatorText := Trim(OperatorText);
+  if OperatorText = '=' then
+    Kind := wckEquals
+  else if OperatorText = '<>' then
+    Kind := wckNotEquals
+  else
+  begin
+    MessageDlg('Add Condition',
+      'Operator must be = or <>.', mtError, [mbOK], 0);
+    Exit;
+  end;
+
+  RightOperand := '';
+  if not InputQuery('Add Condition', 'Right operand:', RightOperand) then
+    Exit;
+  if Trim(RightOperand) = '' then
+    Exit;
+
+  { This first condition editor captures only neutral operands and the semantic
+    comparison kind. Operand typing/resolution will be added as the rule
+    language gains variables and entity-state predicates. }
+  FCurrentRule.AddCondition(Kind, LeftOperand, RightOperand);
+  OpenRuleEditor(FCurrentRule);
 end;
 
 procedure TWorldWrightMainForm.AddRuleActionButtonClick(Sender: TObject);
