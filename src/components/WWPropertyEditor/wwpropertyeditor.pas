@@ -73,8 +73,6 @@ type
     procedure SetProperties(AValue: TWWPropertyItems);
     procedure SyncInspector;
     procedure ValueEditExit(Sender: TObject);
-  protected
-    procedure Resize; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -343,16 +341,6 @@ begin
     Exit;
   BuildPage(FPropertiesBox, False);
   BuildPage(FEventsBox, True);
-end;
-
-procedure TWWPropertyEditor.Resize;
-begin
-  inherited Resize;
-  { Child client widths are not reliable during construction or while the host
-    is still applying .lfm alignment. Rebuild after the inspector receives its
-    real size so the Property/Value geometry is derived from final dimensions. }
-  if (FPropertiesBox <> nil) and (FPropertiesBox.ClientWidth > 0) then
-    SyncInspector;
 end;
 
 procedure TWWPropertyEditor.Clear;
