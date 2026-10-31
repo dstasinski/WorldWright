@@ -123,10 +123,15 @@ type
 
   TWorldObjectList = specialize TObjectList<TWorldObject>;
 
-  { Conditions are neutral predicates evaluated by the WorldWright engine.
-    Operands are stable IDs or literal values according to Kind; exporters map
-    these semantics to their own target syntax. }
-  TWorldConditionKind = (wckEquals, wckNotEquals);
+  { Conditions are semantic predicates rather than free-form expressions.
+    Entity operands store stable WorldWright IDs so display-name changes never
+    break authored rules. More kinds can be added as the world model grows. }
+  TWorldConditionKind = (
+    wckPlayerInRoom,
+    wckPlayerCarryingObject,
+    wckObjectInRoom,
+    wckObjectCarried
+  );
 
   TWorldCondition = class
   private
