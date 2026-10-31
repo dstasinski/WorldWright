@@ -23,26 +23,54 @@ type
     procedure DeleteItemButtonClick(Sender: TObject);
   private
     FRule: TWorldRule;
+    FWorld: TWorld;
+    function ChooseFromList(const ACaption, APrompt: string;
+      AItems: TStrings; out AIndex: Integer): Boolean;
+    function EntityNameByID(const AID: string): string;
     procedure RefreshRuleView;
   public
-    procedure EditRule(ARule: TWorldRule);
+    procedure EditRule(AWorld: TWorld; ARule: TWorldRule);
   end;
 
 implementation
 
 {$R *.lfm}
 
+function TWWRuleEditorForm.EntityNameByID(const AID: string): string;
+var
+  Room: TWorldRoom;
+  WorldObject: TWorldObject;
+begin
+  Result := '[' + AID + ']';
+  for Room in FWorld.Rooms do
+    if SameText(Room.ID, AID) then Exit(Room.Name);
+  for WorldObject in FWorld.Objects do
+    if SameText(WorldObject.ID, AID) then Exit(WorldObject.Name);
+end;
+
+function TWWRuleEditorForm.ChooseFromList(const ACaption, APrompt: string;
+  AItems: TStrings; out AIndex: Integer): Boolean;
+var
+  Choice: string;
+begin
+  Choice := '';
+  Result := InputQuery(ACaption,
+    APrompt + LineEnding + AItems.Text, Choice);
+  if not Result then Exit;
+  if not TryStrToInt(Trim(Choice), AIndex) then Exit(False);
+  Dec(AIndex);
+  Result := (AIndex >= 0) and (AIndex < AItems.Count);
+end;
+
 procedure TWWRuleEditorForm.RefreshRuleView;
 var
   I: Integer;
   Condition: TWorldCondition;
   RuleAction: TWorldAction;
-  OperatorText, ActionText: string;
+  ConditionText, ActionText: string;
 begin
   RuleMemo.Clear;
-  if FRule = nil then
-    Exit;
-
+  if FRule = nil then Exit;
   RuleMemo.Lines.Add('RULE: ' + FRule.Name);
   RuleMemo.Lines.Add('ID: ' + FRule.ID);
   RuleMemo.Lines.Add('');
@@ -54,18 +82,21 @@ begin
     begin
       Condition := FRule.Conditions[I];
       case Condition.Kind of
-        wckEquals: OperatorText := '=';
-        wckNotEquals: OperatorText := '<>';
+        wckPlayerInRoom:
+          ConditionText := 'Player is in ' + EntityNameByID(Condition.RightOperand);
+        wckPlayerCarryingObject:
+          ConditionText := 'Player is carrying ' + EntityNameByID(Condition.RightOperand);
+        wckObjectInRoom:
+          ConditionText := EntityNameByID(Condition.LeftOperand) + ' is in ' +
+            EntityNameByID(Condition.RightOperand);
+        wckObjectCarried:
+          ConditionText := EntityNameByID(Condition.LeftOperand) + ' is carried';
       end;
-      RuleMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' +
-        Condition.LeftOperand + ' ' + OperatorText + ' ' +
-        Condition.RightOperand);
+      RuleMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' + ConditionText);
     end;
-
   RuleMemo.Lines.Add('');
   RuleMemo.Lines.Add('Actions');
-  if FRule.Actions.Count = 0 then
-    RuleMemo.Lines.Add('  (none)')
+  if FRule.Actions.Count = 0 then RuleMemo.Lines.Add('  (none)')
   else
     for I := 0 to FRule.Actions.Count - 1 do
     begin
@@ -78,10 +109,11 @@ begin
     end;
 end;
 
-procedure TWWRuleEditorForm.EditRule(ARule: TWorldRule);
+procedure TWWRuleEditorForm.EditRule(AWorld: TWorld; ARule: TWorldRule);
 begin
   if ARule = nil then
     Exit;
+  FWorld := AWorld;
   FRule := ARule;
   Caption := 'Rule Editor - ' + FRule.Name;
   RefreshRuleView;
@@ -105,30 +137,74 @@ end;
 
 procedure TWWRuleEditorForm.AddConditionButtonClick(Sender: TObject);
 var
-  LeftOperand, OperatorText, RightOperand: string;
-  Kind: TWorldConditionKind;
+  Kinds, Choices: TStringList;
+  KindIndex, ChoiceIndex: Integer;
+  Room: TWorldRoom;
+  WorldObject: TWorldObject;
+  LeftID, RightID: string;
 begin
-  if FRule = nil then
-    Exit;
-  LeftOperand := '';
-  if not InputQuery('Add Condition', 'Left operand:', LeftOperand) then Exit;
-  if Trim(LeftOperand) = '' then Exit;
-  OperatorText := '=';
-  if not InputQuery('Add Condition', 'Operator (= or <>):', OperatorText) then Exit;
-  OperatorText := Trim(OperatorText);
-  if OperatorText = '=' then Kind := wckEquals
-  else if OperatorText = '<>' then Kind := wckNotEquals
-  else
-  begin
-    MessageDlg('Add Condition', 'Operator must be = or <>.',
-      mtError, [mbOK], 0);
-    Exit;
+  if (FRule = nil) or (FWorld = nil) then Exit;
+  Kinds := TStringList.Create;
+  Choices := TStringList.Create;
+  try
+    Kinds.Add('1. Player is in room');
+    Kinds.Add('2. Player is carrying object');
+    Kinds.Add('3. Object is in room');
+    Kinds.Add('4. Object is carried');
+    if not ChooseFromList('Add Condition', 'Choose condition type:', Kinds,
+      KindIndex) then Exit;
+
+    LeftID := '';
+    RightID := '';
+    case KindIndex of
+      0:
+        begin
+          for Room in FWorld.Rooms do
+            Choices.Add(IntToStr(Choices.Count + 1) + '. ' + Room.Name);
+          if not ChooseFromList('Add Condition', 'Choose room:', Choices,
+            ChoiceIndex) then Exit;
+          RightID := FWorld.Rooms[ChoiceIndex].ID;
+          FRule.AddCondition(wckPlayerInRoom, '', RightID);
+        end;
+      1:
+        begin
+          for WorldObject in FWorld.Objects do
+            Choices.Add(IntToStr(Choices.Count + 1) + '. ' + WorldObject.Name);
+          if not ChooseFromList('Add Condition', 'Choose object:', Choices,
+            ChoiceIndex) then Exit;
+          RightID := FWorld.Objects[ChoiceIndex].ID;
+          FRule.AddCondition(wckPlayerCarryingObject, '', RightID);
+        end;
+      2:
+        begin
+          for WorldObject in FWorld.Objects do
+            Choices.Add(IntToStr(Choices.Count + 1) + '. ' + WorldObject.Name);
+          if not ChooseFromList('Add Condition', 'Choose object:', Choices,
+            ChoiceIndex) then Exit;
+          LeftID := FWorld.Objects[ChoiceIndex].ID;
+          Choices.Clear;
+          for Room in FWorld.Rooms do
+            Choices.Add(IntToStr(Choices.Count + 1) + '. ' + Room.Name);
+          if not ChooseFromList('Add Condition', 'Choose room:', Choices,
+            ChoiceIndex) then Exit;
+          RightID := FWorld.Rooms[ChoiceIndex].ID;
+          FRule.AddCondition(wckObjectInRoom, LeftID, RightID);
+        end;
+      3:
+        begin
+          for WorldObject in FWorld.Objects do
+            Choices.Add(IntToStr(Choices.Count + 1) + '. ' + WorldObject.Name);
+          if not ChooseFromList('Add Condition', 'Choose object:', Choices,
+            ChoiceIndex) then Exit;
+          LeftID := FWorld.Objects[ChoiceIndex].ID;
+          FRule.AddCondition(wckObjectCarried, LeftID, '');
+        end;
+    end;
+    RefreshRuleView;
+  finally
+    Choices.Free;
+    Kinds.Free;
   end;
-  RightOperand := '';
-  if not InputQuery('Add Condition', 'Right operand:', RightOperand) then Exit;
-  if Trim(RightOperand) = '' then Exit;
-  FRule.AddCondition(Kind, LeftOperand, RightOperand);
-  RefreshRuleView;
 end;
 
 procedure TWWRuleEditorForm.DeleteItemButtonClick(Sender: TObject);
