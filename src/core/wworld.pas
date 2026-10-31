@@ -90,10 +90,10 @@ type
     procedure MoveToRoom(ARoom: TWorldRoom);
     procedure MoveToPlayerInventory;
     property Description: string read FDescription write FDescription;
-    { Complete player-facing reference phrase. When present, Tag is used as an
-      exact alternate reference and display phrase; it is not automatically
-      combined with Name. Name and stable ID remain independent authoring
-      identity fields. }
+    { Player-facing descriptive noun phrase, normally authored without an
+      indefinite article (for example "rusty iron key"). Tag is an exact
+      alternate player reference and replaces Name for descriptive display;
+      prose generation may add grammatical articles such as a/an. }
     property Tag: string read FTag
       write FTag;
     property LocationKind: TWorldObjectLocationKind read FLocationKind;
