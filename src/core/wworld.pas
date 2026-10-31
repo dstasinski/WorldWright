@@ -75,11 +75,6 @@ type
 
   TWorldEventBindingList = specialize TObjectList<TWorldEventBinding>;
 
-  function FindEventBinding(AEvents: TWorldEventBindingList;
-    const AEventName: string): TWorldEventBinding;
-
-
-
   { TWorldRoom is the first concrete world entity. }
   TWorldRoom = class(TWorldEntity)
   private
@@ -168,6 +163,11 @@ type
     property Objects: TWorldObjectList read FObjects;
     property Rules: TWorldRuleList read FRules;
   end;
+
+{ Locate a semantic hook by its neutral event name. This helper belongs outside
+  the type declaration block; callers use it without depending on list order. }
+function FindEventBinding(AEvents: TWorldEventBindingList;
+  const AEventName: string): TWorldEventBinding;
 
 implementation
 
