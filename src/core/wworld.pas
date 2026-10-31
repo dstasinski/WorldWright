@@ -19,6 +19,7 @@ uses
 type
   TWorldRoom = class;
   TWorldObject = class;
+  TWorldRule = class;
 
   { TWorldDirection is deliberately target-independent. Exporters may translate
     these values into their own syntax without changing the live model. }
@@ -59,11 +60,29 @@ type
 
   TWorldExitList = specialize TObjectList<TWorldExit>;
 
+  { A semantic event binding stores only the stable ID of a WorldWright rule.
+    It never owns the rule and never contains target-language source. Empty
+    RuleID means the hook is intentionally unbound. }
+  TWorldEventBinding = class
+  private
+    FEventName: string;
+    FRuleID: string;
+  public
+    constructor Create(const AEventName: string);
+    property EventName: string read FEventName;
+    property RuleID: string read FRuleID write FRuleID;
+  end;
+
+  TWorldEventBindingList = specialize TObjectList<TWorldEventBinding>;
+
+
+
   { TWorldRoom is the first concrete world entity. }
   TWorldRoom = class(TWorldEntity)
   private
     FDescription: string;
     FExits: TWorldExitList;
+    FEvents: TWorldEventBindingList;
   public
     constructor Create(const AID, AName: string);
     destructor Destroy; override;
@@ -73,6 +92,7 @@ type
     function ExitTo(ADirection: TWorldDirection): TWorldRoom;
     property Description: string read FDescription write FDescription;
     property Exits: TWorldExitList read FExits;
+    property Events: TWorldEventBindingList read FEvents;
   end;
 
   TWorldRoomList = specialize TObjectList<TWorldRoom>;
@@ -85,8 +105,10 @@ type
     FTag: string;
     FRoom: TWorldRoom;
     FLocationKind: TWorldObjectLocationKind;
+    FEvents: TWorldEventBindingList;
   public
     constructor Create(const AID, AName: string; ARoom: TWorldRoom);
+    destructor Destroy; override;
     procedure MoveToRoom(ARoom: TWorldRoom);
     procedure MoveToPlayerInventory;
     property Description: string read FDescription write FDescription;
@@ -98,21 +120,35 @@ type
       write FTag;
     property LocationKind: TWorldObjectLocationKind read FLocationKind;
     property Room: TWorldRoom read FRoom;
+    property Events: TWorldEventBindingList read FEvents;
   end;
 
   TWorldObjectList = specialize TObjectList<TWorldObject>;
+
+  { TWorldRule is the durable neutral identity referenced by semantic events.
+    Conditions and actions are intentionally deferred; this slice establishes
+    stable authored relationships before defining the rule language itself. }
+  TWorldRule = class(TWorldEntity)
+  end;
+
+  TWorldRuleList = specialize TObjectList<TWorldRule>;
+
+
 
   { TWorld owns the live target-independent model. }
   TWorld = class
   private
     FRooms: TWorldRoomList;
     FObjects: TWorldObjectList;
+    FRules: TWorldRuleList;
   public
     constructor Create;
     destructor Destroy; override;
     { Add methods transfer ownership of the returned entity to TWorld. }
     function AddRoom(const AID, AName: string): TWorldRoom;
     function AddObject(const AID, AName: string; ARoom: TWorldRoom): TWorldObject;
+    function AddRule(const AID, AName: string): TWorldRule;
+    function FindRuleByID(const AID: string): TWorldRule;
     { Stable IDs are the safe long-lived reference used by transient systems
       such as pending parser choices. The returned object remains world-owned. }
     function FindObjectByID(const AID: string): TWorldObject;
@@ -127,6 +163,7 @@ type
     procedure DeleteRoom(ARoom: TWorldRoom);
     property Rooms: TWorldRoomList read FRooms;
     property Objects: TWorldObjectList read FObjects;
+    property Rules: TWorldRuleList read FRules;
   end;
 
 implementation
@@ -150,14 +187,25 @@ begin
   FDestination := ADestination;
 end;
 
+constructor TWorldEventBinding.Create(const AEventName: string);
+begin
+  inherited Create;
+  if Trim(AEventName) = '' then
+    raise EArgumentException.Create('Event name must not be empty');
+  FEventName := AEventName;
+  FRuleID := '';
+end;
+
 constructor TWorldRoom.Create(const AID, AName: string);
 begin
   inherited Create(AID, AName);
   FExits := TWorldExitList.Create(True);
+  FEvents := TWorldEventBindingList.Create(True);
 end;
 
 destructor TWorldRoom.Destroy;
 begin
+  FEvents.Free;
   FExits.Free;
   inherited Destroy;
 end;
@@ -195,6 +243,13 @@ begin
     raise EArgumentNilException.Create('ARoom');
   FRoom := ARoom;
   FLocationKind := olRoom;
+  FEvents := TWorldEventBindingList.Create(True);
+end;
+
+destructor TWorldObject.Destroy;
+begin
+  FEvents.Free;
+  inherited Destroy;
 end;
 
 procedure TWorldObject.MoveToRoom(ARoom: TWorldRoom);
@@ -216,10 +271,12 @@ begin
   inherited Create;
   FRooms := TWorldRoomList.Create(True);
   FObjects := TWorldObjectList.Create(True);
+  FRules := TWorldRuleList.Create(True);
 end;
 
 destructor TWorld.Destroy;
 begin
+  FRules.Free;
   FObjects.Free;
   FRooms.Free;
   inherited Destroy;
@@ -236,6 +293,22 @@ function TWorld.AddObject(const AID, AName: string;
 begin
   Result := TWorldObject.Create(AID, AName, ARoom);
   FObjects.Add(Result);
+end;
+
+function TWorld.AddRule(const AID, AName: string): TWorldRule;
+begin
+  Result := TWorldRule.Create(AID, AName);
+  FRules.Add(Result);
+end;
+
+function TWorld.FindRuleByID(const AID: string): TWorldRule;
+var
+  Rule: TWorldRule;
+begin
+  for Rule in FRules do
+    if SameText(Rule.ID, Trim(AID)) then
+      Exit(Rule);
+  Result := nil;
 end;
 
 function TWorld.FindObjectByID(const AID: string): TWorldObject;
