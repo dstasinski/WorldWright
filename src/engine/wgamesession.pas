@@ -282,16 +282,13 @@ function TGameSession.ObjectDisplayPhrase(AObject: TWorldObject): string;
 var
   Phrase, LowerPhrase: string;
 begin
-  { Tag is already the author's complete player-facing phrase, so never add an
-    article to it. Untagged Stage 1 objects receive the normal indefinite
-    article based on the first letter of their display name. This intentionally
-    implements the common orthographic rule; richer pronunciation exceptions
-    can later live in vocabulary/grammar metadata rather than ad-hoc guesses. }
+  { Tag is the authored descriptive noun phrase, without an indefinite
+    article. Prefer it to Name for player-facing prose, then apply the common
+    a/an spelling rule to whichever phrase is displayed. Pronunciation
+    exceptions can later be represented explicitly in vocabulary metadata. }
   Phrase := Trim(AObject.Tag);
-  if Phrase <> '' then
-    Exit(Phrase);
-
-  Phrase := Trim(AObject.Name);
+  if Phrase = '' then
+    Phrase := Trim(AObject.Name);
   if Phrase = '' then
     Exit('');
 
