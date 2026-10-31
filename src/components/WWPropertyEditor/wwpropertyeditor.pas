@@ -5,7 +5,7 @@ unit WWPropertyEditor;
 interface
 
 uses
-  Classes, SysUtils, Controls, ComCtrls, ExtCtrls, StdCtrls, Graphics;
+  Classes, SysUtils, Controls, ComCtrls, ExtCtrls, StdCtrls, Graphics, Forms;
 
 type
   { Editor capabilities are deliberately independent of WorldWright model
