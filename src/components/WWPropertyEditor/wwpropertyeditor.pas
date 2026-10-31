@@ -75,6 +75,7 @@ type
     FProperties: TWWPropertyItems;
     FOnPropertyChanged: TWWPropertyChangedEvent;
     FDividerPercent: Integer;
+    FUpdateCount: Integer;
     procedure BuildPage(ABox: TScrollBox; AEvents: Boolean);
     procedure NameLabelClick(Sender: TObject);
     procedure SetProperties(AValue: TWWPropertyItems);
@@ -84,6 +85,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure BeginUpdate;
+    procedure EndUpdate;
     procedure Clear;
     function AddProperty(const AID, AName, AValue: string;
       AKind: TWWPropertyKind = wpkReadOnly;
@@ -150,6 +153,7 @@ begin
   inherited Create(AOwner);
   FProperties := TWWPropertyItems.Create(Self);
   FDividerPercent := 48;
+  FUpdateCount := 0;
 
   FPageControl := TPageControl.Create(Self);
   FPageControl.Parent := Self;
@@ -423,10 +427,26 @@ end;
 
 procedure TWWPropertyEditor.SyncInspector;
 begin
+  if FUpdateCount > 0 then
+    Exit;
   if (FPropertiesBox = nil) or (FEventsBox = nil) then
     Exit;
   BuildPage(FPropertiesBox, False);
   BuildPage(FEventsBox, True);
+end;
+
+procedure TWWPropertyEditor.BeginUpdate;
+begin
+  Inc(FUpdateCount);
+end;
+
+procedure TWWPropertyEditor.EndUpdate;
+begin
+  if FUpdateCount = 0 then
+    Exit;
+  Dec(FUpdateCount);
+  if FUpdateCount = 0 then
+    SyncInspector;
 end;
 
 procedure TWWPropertyEditor.Clear;
