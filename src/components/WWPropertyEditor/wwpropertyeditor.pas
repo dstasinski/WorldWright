@@ -159,9 +159,8 @@ var
   I, J, TopPos, Divider: Integer;
   Category: string;
   CategorySeen: Boolean;
-  HeaderPanel, HeaderPropertyPanel, HeaderValuePanel,
-    CategoryPanel, RowPanel: TPanel;
-  NameLabel: TLabel;
+  HeaderPanel, CategoryPanel, RowPanel: TPanel;
+  HeaderPropertyLabel, HeaderValueLabel, NameLabel: TLabel;
   ValueEdit: TEdit;
 begin
   { Rows are rebuilt from metadata. They are disposable views; no authored
@@ -184,24 +183,24 @@ begin
   HeaderPanel.BevelOuter := bvNone;
   HeaderPanel.Caption := '';
 
-  HeaderPropertyPanel := TPanel.Create(HeaderPanel);
-  HeaderPropertyPanel.Parent := HeaderPanel;
-  HeaderPropertyPanel.SetBounds(0, 0, Divider, HeaderPanel.ClientHeight);
-  HeaderPropertyPanel.Anchors := [akLeft, akTop, akBottom];
-  HeaderPropertyPanel.Alignment := taLeftJustify;
-  HeaderPropertyPanel.Caption := '  Property';
-  HeaderPropertyPanel.Font.Style := [fsBold];
-  HeaderPropertyPanel.BevelOuter := bvLowered;
+  { Labels are parented directly to one header surface. Their explicit bounds
+    avoid panel alignment/anchoring interactions under GTK2. }
+  HeaderPropertyLabel := TLabel.Create(HeaderPanel);
+  HeaderPropertyLabel.Parent := HeaderPanel;
+  HeaderPropertyLabel.AutoSize := False;
+  HeaderPropertyLabel.SetBounds(8, 4, Divider - 12, 20);
+  HeaderPropertyLabel.Caption := 'Property';
+  HeaderPropertyLabel.Font.Style := [fsBold];
+  HeaderPropertyLabel.BringToFront;
 
-  HeaderValuePanel := TPanel.Create(HeaderPanel);
-  HeaderValuePanel.Parent := HeaderPanel;
-  HeaderValuePanel.SetBounds(Divider, 0,
-    HeaderPanel.ClientWidth - Divider, HeaderPanel.ClientHeight);
-  HeaderValuePanel.Anchors := [akLeft, akTop, akRight, akBottom];
-  HeaderValuePanel.Alignment := taLeftJustify;
-  HeaderValuePanel.Caption := '  Value';
-  HeaderValuePanel.Font.Style := [fsBold];
-  HeaderValuePanel.BevelOuter := bvLowered;
+  HeaderValueLabel := TLabel.Create(HeaderPanel);
+  HeaderValueLabel.Parent := HeaderPanel;
+  HeaderValueLabel.AutoSize := False;
+  HeaderValueLabel.SetBounds(Divider + 8, 4,
+    HeaderPanel.ClientWidth - Divider - 12, 20);
+  HeaderValueLabel.Caption := 'Value';
+  HeaderValueLabel.Font.Style := [fsBold];
+  HeaderValueLabel.BringToFront;
   Inc(TopPos, HeaderPanel.Height);
 
   for I := 0 to FProperties.Count - 1 do
