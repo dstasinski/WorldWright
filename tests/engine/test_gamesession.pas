@@ -28,7 +28,7 @@ begin
     Hallway.Description := 'A narrow hallway stretches north and south.';
     BrassKey := World.AddObject('brass_key', 'brass key', Laboratory);
     BrassKey.Description := 'A small, tarnished brass key.';
-    BrassKey.Tag := 'a tarnished brass key';
+    BrassKey.Tag := 'tarnished brass key';
     Laboratory.Connect(wdNorth, Hallway);
     Hallway.Connect(wdSouth, Laboratory);
 
@@ -44,16 +44,16 @@ begin
       Check(Pos('brass key', Output) > 0,
         'LOOK omitted an object in the current room');
       Check(Pos('a tarnished brass key', Output) > 0,
-        'LOOK did not use an authored complete Tag phrase');
+        'LOOK did not add an article to the authored Tag noun phrase');
 
       Apple := World.AddObject('apple', 'apple', Laboratory);
       Output := Session.ExecuteCommand('look');
       Check(Pos('an apple', Output) > 0,
         'LOOK did not choose an before a vowel-leading object name');
-      Apple.Tag := 'the red apple';
+      Apple.Tag := 'old apple';
       Output := Session.ExecuteCommand('look');
-      Check(Pos('the red apple', Output) > 0,
-        'LOOK altered an authored complete Tag phrase');
+      Check(Pos('an old apple', Output) > 0,
+        'LOOK did not apply an before a vowel-leading Tag noun phrase');
 
       Output := Session.ExecuteCommand('examine brass key');
       Check(Pos('a tarnished brass key', Output) > 0,
@@ -91,22 +91,22 @@ begin
         'Reset did not restore authored initial object location');
 
       with World.AddObject('brass_key_2', 'brass key', Laboratory) do
-        Tag := 'a shiny brass key';
-      Output := Session.ExecuteCommand('examine a shiny brass key');
+        Tag := 'shiny brass key';
+      Output := Session.ExecuteCommand('examine shiny brass key');
       Check(Pos('nothing special', Output) > 0,
         'EXAMINE did not resolve tag directly');
 
-      Output := Session.ExecuteCommand('take a shiny brass key');
+      Output := Session.ExecuteCommand('take shiny brass key');
       Check(Pos('Taken', Output) > 0,
         'TAKE did not resolve tag directly');
-      Output := Session.ExecuteCommand('drop a shiny brass key');
+      Output := Session.ExecuteCommand('drop shiny brass key');
       Check(Pos('Dropped', Output) > 0,
         'DROP did not resolve tag in inventory');
 
       Output := Session.ExecuteCommand('examine brass key');
       Check((Pos('Which', Output) > 0) and (Pos('1.', Output) > 0) and
         (Pos('2.', Output) > 0) and (Pos('a tarnished brass key', Output) > 0) and
-        (Pos('a shiny brass key', Output) > 0),
+        (Pos('shiny brass key', Output) > 0),
         'EXAMINE did not offer numbered duplicate-name choices');
       Output := Session.ExecuteCommand('2');
       Check(Pos('nothing special', Output) > 0,
