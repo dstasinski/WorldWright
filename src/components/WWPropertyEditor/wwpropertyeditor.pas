@@ -96,6 +96,7 @@ type
     procedure BeginUpdate;
     procedure EndUpdate;
     procedure Clear;
+    procedure RefreshPropertyValue(AProperty: TWWPropertyItem);
     function AddProperty(const AID, AName, AValue: string;
       AKind: TWWPropertyKind = wpkReadOnly;
       const ACategory: string = 'General'): TWWPropertyItem;
@@ -602,6 +603,45 @@ procedure TWWPropertyEditor.Clear;
 begin
   FProperties.Clear;
   SyncInspector;
+end;
+
+procedure TWWPropertyEditor.RefreshPropertyValue(AProperty: TWWPropertyItem);
+var
+  I, J, PropertyIndex: Integer;
+  Box: TScrollBox;
+  Row: TWinControl;
+  Control: TControl;
+begin
+  if AProperty = nil then
+    Exit;
+
+  PropertyIndex := AProperty.Index + 1;
+  if AProperty.Kind = wpkEvent then
+    Box := FEventsBox
+  else
+    Box := FPropertiesBox;
+
+  { Update the disposable view that represents existing metadata without
+    rebuilding controls during a mouse event. This is safe for GTK2 event
+    activation and keeps model metadata and the visible inspector synchronized. }
+  for I := 0 to Box.ControlCount - 1 do
+    if Box.Controls[I] is TWinControl then
+    begin
+      Row := TWinControl(Box.Controls[I]);
+      for J := 0 to Row.ControlCount - 1 do
+      begin
+        Control := Row.Controls[J];
+        if Control.Tag <> PropertyIndex then
+          Continue;
+        if (AProperty.Kind = wpkEvent) and (Control is TPanel) then
+          TPanel(Control).Caption := '  ' + AProperty.Value
+        else if Control is TEdit then
+          TEdit(Control).Text := AProperty.Value
+        else if Control is TComboBox then
+          TComboBox(Control).ItemIndex :=
+            TComboBox(Control).Items.IndexOf(AProperty.Value);
+      end;
+    end;
 end;
 
 function TWWPropertyEditor.AddProperty(const AID, AName, AValue: string;
