@@ -48,6 +48,8 @@ type
     procedure PropertyEditorPropertyChanged(Sender: TObject;
       AProperty: TWWPropertyItem; const AOldValue, ANewValue: string;
       var Accept: Boolean);
+    function EventRuleDisplay(AEvents: TWorldEventBindingList;
+      const AEventName: string): string;
     procedure RefreshWorldView;
     procedure RefreshInspector;
     procedure SubmitCommand;
@@ -291,6 +293,27 @@ begin
     WorldTree.Selected.Text := RoomTreeLabel(TWorldRoom(SelectedEntity));
 end;
 
+function TWorldWrightMainForm.EventRuleDisplay(
+  AEvents: TWorldEventBindingList; const AEventName: string): string;
+var
+  Binding: TWorldEventBinding;
+  Rule: TWorldRule;
+begin
+  Result := '(none)';
+  Binding := FindEventBinding(AEvents, AEventName);
+  if (Binding = nil) or (Trim(Binding.RuleID) = '') then
+    Exit;
+
+  Rule := FWorld.FindRuleByID(Binding.RuleID);
+  if Rule <> nil then
+    Result := Rule.Name
+  else
+    { Preserve visibility of a broken authored relationship rather than
+      silently presenting it as unbound. Validation can later report the same
+      missing stable ID formally. }
+    Result := '[missing: ' + Binding.RuleID + ']';
+end;
+
 procedure TWorldWrightMainForm.RefreshInspector;
 var
   SelectedEntity: TWorldEntity;
@@ -370,14 +393,14 @@ begin
       activation arrive in the next rule-model slice; showing the canonical
       hooks now establishes the authoring surface without inventing transient
       GUI-owned event state. }
-    PropertyEditor.AddProperty('event_examine', 'OnExamine', '(none)',
-      wpkEvent, 'Actions');
-    PropertyEditor.AddProperty('event_take', 'OnTake', '(none)',
-      wpkEvent, 'Actions');
-    PropertyEditor.AddProperty('event_drop', 'OnDrop', '(none)',
-      wpkEvent, 'Actions');
-    PropertyEditor.AddProperty('event_use', 'OnUse', '(none)',
-      wpkEvent, 'Actions');
+    PropertyEditor.AddProperty('event_examine', 'OnExamine',
+      EventRuleDisplay(SelectedObject.Events, 'OnExamine'), wpkEvent, 'Actions');
+    PropertyEditor.AddProperty('event_take', 'OnTake',
+      EventRuleDisplay(SelectedObject.Events, 'OnTake'), wpkEvent, 'Actions');
+    PropertyEditor.AddProperty('event_drop', 'OnDrop',
+      EventRuleDisplay(SelectedObject.Events, 'OnDrop'), wpkEvent, 'Actions');
+    PropertyEditor.AddProperty('event_use', 'OnUse',
+      EventRuleDisplay(SelectedObject.Events, 'OnUse'), wpkEvent, 'Actions');
     Exit;
   end;
 
@@ -393,12 +416,12 @@ begin
   PropertyEditor.AddProperty('description', 'Description',
     SelectedRoom.Description, wpkDialog, 'Appearance');
 
-  PropertyEditor.AddProperty('event_enter', 'OnEnter', '(none)',
-    wpkEvent, 'Lifecycle');
-  PropertyEditor.AddProperty('event_exit', 'OnExit', '(none)',
-    wpkEvent, 'Lifecycle');
-  PropertyEditor.AddProperty('event_look', 'OnLook', '(none)',
-    wpkEvent, 'Lifecycle');
+  PropertyEditor.AddProperty('event_enter', 'OnEnter',
+    EventRuleDisplay(SelectedRoom.Events, 'OnEnter'), wpkEvent, 'Lifecycle');
+  PropertyEditor.AddProperty('event_exit', 'OnExit',
+    EventRuleDisplay(SelectedRoom.Events, 'OnExit'), wpkEvent, 'Lifecycle');
+  PropertyEditor.AddProperty('event_look', 'OnLook',
+    EventRuleDisplay(SelectedRoom.Events, 'OnLook'), wpkEvent, 'Lifecycle');
   finally
     PropertyEditor.EndUpdate;
   end;
