@@ -194,8 +194,8 @@ var
   I, J, TopPos, Divider: Integer;
   Category: string;
   CategorySeen: Boolean;
-  HeaderPanel, CategoryPanel, RowPanel: TPanel;
-  HeaderPropertyCell, HeaderValueCell, NameCell: TPanel;
+  CategoryPanel, RowPanel: TPanel;
+  NameCell: TPanel;
   ValueEdit: TEdit;
   ValueCombo: TComboBox;
   DialogButton: TButton;
@@ -210,36 +210,8 @@ begin
   if Divider < 80 then
     Divider := 80;
 
-  { Keep the familiar Object Inspector column captions above the categorized
-    rows. The header is presentation only; category rows below still span the
-    full width and are not divided into property/value cells. }
-  HeaderPanel := TPanel.Create(ABox);
-  HeaderPanel.Parent := ABox;
-  HeaderPanel.SetBounds(0, TopPos, ABox.ClientWidth, 28);
-  HeaderPanel.Anchors := [akLeft, akTop, akRight];
-  HeaderPanel.BevelOuter := bvNone;
-  HeaderPanel.Caption := '';
-
-  { GTK2 did not reliably paint dynamically created TLabels on these
-    runtime panels. Use the panel captions themselves, as category captions
-    already render reliably on the same widgetset. }
-  HeaderPropertyCell := TPanel.Create(HeaderPanel);
-  HeaderPropertyCell.Parent := HeaderPanel;
-  HeaderPropertyCell.SetBounds(0, 0, Divider, HeaderPanel.ClientHeight);
-  HeaderPropertyCell.Alignment := taLeftJustify;
-  HeaderPropertyCell.Caption := '  Property';
-  HeaderPropertyCell.Font.Style := [fsBold];
-  HeaderPropertyCell.BevelOuter := bvNone;
-
-  HeaderValueCell := TPanel.Create(HeaderPanel);
-  HeaderValueCell.Parent := HeaderPanel;
-  HeaderValueCell.SetBounds(Divider, 0,
-    HeaderPanel.ClientWidth - Divider, HeaderPanel.ClientHeight);
-  HeaderValueCell.Alignment := taLeftJustify;
-  HeaderValueCell.Caption := '  Value';
-  HeaderValueCell.Font.Style := [fsBold];
-  HeaderValueCell.BevelOuter := bvNone;
-  Inc(TopPos, HeaderPanel.Height);
+  { Category headings provide sufficient structure; a repeated Property/Value
+    header consumed vertical space without adding useful information. }
 
   for I := 0 to FProperties.Count - 1 do
   begin
