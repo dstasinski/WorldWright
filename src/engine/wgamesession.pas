@@ -47,6 +47,7 @@ type
       out AObject: TWorldObject): TObjectResolveStatus;
     function ResolveVisibleObject(ARoom: TWorldRoom; const ANameOrID: string;
       out AObject: TWorldObject): TObjectResolveStatus;
+    function ObjectDisplayPhrase(AObject: TWorldObject): string;
     function DescribeCurrentRoom: string;
     function Move(ADirection: TWorldDirection): string;
     function Examine(const ANounPhrase: string): string;
@@ -277,6 +278,30 @@ begin
   FPendingKind := pcUnknown;
 end;
 
+function TGameSession.ObjectDisplayPhrase(AObject: TWorldObject): string;
+var
+  Phrase, LowerPhrase: string;
+begin
+  { Tag is already the author's complete player-facing phrase, so never add an
+    article to it. Untagged Stage 1 objects receive the normal indefinite
+    article based on the first letter of their display name. This intentionally
+    implements the common orthographic rule; richer pronunciation exceptions
+    can later live in vocabulary/grammar metadata rather than ad-hoc guesses. }
+  Phrase := Trim(AObject.Tag);
+  if Phrase <> '' then
+    Exit(Phrase);
+
+  Phrase := Trim(AObject.Name);
+  if Phrase = '' then
+    Exit('');
+
+  LowerPhrase := LowerCase(Phrase);
+  if LowerPhrase[1] in ['a', 'e', 'i', 'o', 'u'] then
+    Result := 'an ' + Phrase
+  else
+    Result := 'a ' + Phrase;
+end;
+
 function TGameSession.DescribeCurrentRoom: string;
 var
   WorldObject: TWorldObject;
@@ -297,7 +322,7 @@ begin
     begin
       if ObjectsText <> '' then
         ObjectsText := ObjectsText + ', ';
-      ObjectsText := ObjectsText + WorldObject.Name;
+      ObjectsText := ObjectsText + ObjectDisplayPhrase(WorldObject);
     end;
   if ObjectsText <> '' then
     Result := Result + LineEnding + 'You can see ' + ObjectsText + ' here.';
