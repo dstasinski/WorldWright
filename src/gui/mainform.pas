@@ -5,7 +5,7 @@ unit MainForm;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Menus,
+  Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Menus, Dialogs,
   WWorld, WGameSession, WBuilderSession, WWPropertyEditor;
 
 type
@@ -14,11 +14,13 @@ type
     the live model and game session; parser/engine behavior belongs outside
     the form. }
   TWorldWrightMainForm = class(TForm)
+    AddRuleActionButton: TButton;
     CenterPanel: TPanel;
     CommandMemo: TMemo;
     CommandPanel: TPanel;
     GoHereMenuItem: TMenuItem;
     PropertyEditor: TWWPropertyEditor;
+    RuleEditorPanel: TPanel;
     LeftPanel: TPanel;
     WorldTreePopupMenu: TPopupMenu;
     RightPanel: TPanel;
@@ -26,6 +28,7 @@ type
     SplitRight: TSplitter;
     WorkspaceMemo: TMemo;
     WorldTree: TTreeView;
+    procedure AddRuleActionButtonClick(Sender: TObject);
     procedure CommandMemoChange(Sender: TObject);
     procedure CommandMemoKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
@@ -40,6 +43,7 @@ type
     FSession: TGameSession;
     FBuilder: TBuilderSession;
     FProcessingInput: Boolean;
+    FCurrentRule: TWorldRule;
     procedure BuildStarterWorld;
     procedure ExecuteInputLine(const ACommand: string);
     function ObjectTreeLabel(AObject: TWorldObject): string;
@@ -67,6 +71,8 @@ implementation
 
 procedure TWorldWrightMainForm.FormCreate(Sender: TObject);
 begin
+  FCurrentRule := nil;
+  RuleEditorPanel.Visible := False;
   FWorld := TWorld.Create;
   BuildStarterWorld;
   FSession := TGameSession.Create(FWorld);
@@ -237,6 +243,26 @@ begin
   RefreshInspector;
 end;
 
+procedure TWorldWrightMainForm.AddRuleActionButtonClick(Sender: TObject);
+var
+  TextValue: string;
+begin
+  if FCurrentRule = nil then
+    Exit;
+
+  TextValue := '';
+  if not InputQuery('Add Say Action', 'Text to say:', TextValue) then
+    Exit;
+  if Trim(TextValue) = '' then
+    Exit;
+
+  { The GUI mutates the same neutral rule model used by persistence and future
+    exporters. The dialog gathers only the semantic Say payload; it does not
+    accept target-language source code. }
+  FCurrentRule.AddAction(wakSay, TextValue);
+  OpenRuleEditor(FCurrentRule);
+end;
+
 procedure TWorldWrightMainForm.OpenRuleEditor(ARule: TWorldRule);
 var
   I: Integer;
@@ -246,6 +272,9 @@ var
 begin
   if ARule = nil then
     Exit;
+
+  FCurrentRule := ARule;
+  RuleEditorPanel.Visible := True;
 
   { The first Rule Editor view is model-backed and read-only. Showing the real
     ordered semantic lists now keeps the workspace truthful while mutation
