@@ -11,7 +11,16 @@ type
   { TWWPropertyKind identifies the editor semantics of a property independently
     of its displayed text. More kinds can be added without coupling this
     component to WorldWright's world model. }
-  TWWPropertyKind = (wpkReadOnly, wpkText, wpkEvent);
+  TWWPropertyKind = (
+    wpkReadOnly,
+    wpkText,
+    wpkBoolean,
+    wpkEnum,
+    wpkReference,
+    wpkStructured,
+    wpkDialog,
+    wpkEvent
+  );
 
   { TWWPropertyItem is one row of property metadata. ID is a stable,
     non-visual key supplied by the host; Name is the author-facing caption.
@@ -54,9 +63,12 @@ type
     Event-valued rows use wpkEvent as a presentation/editing contract only;
     the component does not know what an event means or what model owns it.
 
-    Text rows support controlled inline editing. The host must accept a
-    proposed value through OnPropertyChanged; otherwise the edit is rejected.
-    Read-only and event rows cannot be changed through the text editor. }
+    Each TWWPropertyKind describes an editing capability rather than a world
+    model type. Text uses controlled inline editing today; Boolean, enum,
+    reference, structured, dialog, and event kinds are neutral contracts for
+    dedicated editors added incrementally. The host must accept proposed model
+    changes through OnPropertyChanged, keeping this control presentation-only.
+    Read-only/category cells never enter an inline editor. }
   TWWPropertyEditor = class(TCustomControl)
   private
     FPageControl: TPageControl;
@@ -69,6 +81,8 @@ type
     procedure ConfigureGrid(AGrid: TStringGrid);
     function PropertyForGridRow(AGrid: TStringGrid;
       ARow: Integer): TWWPropertyItem;
+    procedure GridSelectEditor(Sender: TObject; ACol, ARow: Integer;
+      var Editor: TWinControl);
     procedure GridDrawCell(Sender: TObject; ACol, ARow: Integer;
       ARect: TRect; AState: TGridDrawState);
     procedure GridPrepareCanvas(Sender: TObject; ACol, ARow: Integer;
@@ -181,6 +195,7 @@ begin
   AGrid.Cells[0, 0] := 'Property';
   AGrid.Cells[1, 0] := 'Value';
   AGrid.TabStop := True;
+  AGrid.OnSelectEditor := @GridSelectEditor;
   AGrid.OnDrawCell := @GridDrawCell;
   AGrid.OnPrepareCanvas := @GridPrepareCanvas;
 end;
@@ -208,6 +223,29 @@ begin
         Result := FProperties[I];
         Exit;
       end;
+end;
+
+procedure TWWPropertyEditor.GridSelectEditor(Sender: TObject;
+  ACol, ARow: Integer; var Editor: TWinControl);
+var
+  Grid: TStringGrid;
+  Prop: TWWPropertyItem;
+begin
+  Grid := TStringGrid(Sender);
+
+  { Lazarus property editors expose editing capabilities by property type.
+    WorldWright follows the same principle without depending on IDE RTTI.
+    For this foundation slice, only plain text values use TStringGrid's
+    built-in editor. Other kinds will receive dedicated editors incrementally. }
+  if ACol <> 1 then
+  begin
+    Editor := nil;
+    Exit;
+  end;
+
+  Prop := PropertyForGridRow(Grid, ARow);
+  if (Prop = nil) or (Prop.Kind <> wpkText) then
+    Editor := nil;
 end;
 
 procedure TWWPropertyEditor.GridDrawCell(Sender: TObject;
