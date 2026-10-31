@@ -173,8 +173,11 @@ begin
   AGrid.FixedCols := 0;
   AGrid.FixedRows := 1;
   AGrid.RowCount := 1;
-  AGrid.Options := [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine,
-    goRangeSelect, goSmoothScroll, goEditing];
+  { Horizontal rules retain row structure. Vertical rules are drawn explicitly
+    for real property rows so category headings can genuinely span both
+    columns without a misleading divider through the heading. }
+  AGrid.Options := [goFixedHorzLine, goHorzLine, goRangeSelect,
+    goSmoothScroll, goEditing];
   AGrid.Cells[0, 0] := 'Property';
   AGrid.Cells[1, 0] := 'Value';
   AGrid.TabStop := True;
@@ -221,7 +224,18 @@ begin
 
   Prop := PropertyForGridRow(Grid, ARow);
   if Prop <> nil then
+  begin
+    { With global vertical grid lines disabled, draw the property/value divider
+      only on actual property rows. This preserves the familiar two-column
+      inspector while category rows remain visually full width. }
+    if ACol = 0 then
+    begin
+      Grid.Canvas.Pen.Color := clBtnShadow;
+      Grid.Canvas.MoveTo(ARect.Right - 1, ARect.Top);
+      Grid.Canvas.LineTo(ARect.Right - 1, ARect.Bottom);
+    end;
     Exit;
+  end;
 
   { Category headings are one logical section header, not a property/value
     pair. Draw the first cell across both columns and suppress the second-cell
