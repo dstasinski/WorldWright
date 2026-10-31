@@ -94,6 +94,15 @@ object WorldWrightMainForm: TWorldWrightMainForm
       ClientWidth = 590
       TabOrder = 2
       Visible = False
+      object DeleteRuleItemButton: TButton
+        Left = 289
+        Height = 32
+        Top = 5
+        Width = 110
+        Caption = 'Delete Item...'
+        OnClick = DeleteRuleItemButtonClick
+        TabOrder = 2
+      end
       object AddRuleConditionButton: TButton
         Left = 8
         Height = 32
