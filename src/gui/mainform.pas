@@ -243,6 +243,8 @@ var
   Events: TWorldEventBindingList;
   Binding: TWorldEventBinding;
   Rule: TWorldRule;
+  RuleNode, RulesNode: TTreeNode;
+  I: Integer;
   EventName, RuleID, RuleName: string;
 begin
   if (AProperty = nil) or (AProperty.Kind <> wpkEvent) or
@@ -286,10 +288,40 @@ begin
 
   WorkspaceMemo.Lines.Add('');
   WorkspaceMemo.Lines.Add('Rule: ' + Rule.Name + ' [' + Rule.ID + ']');
-  { Creating a rule changes authored tree structure. Rebuild the projection so
-    the new first-class Rule appears immediately while logical selection is
-    preserved by stable entity ID. }
-  RefreshWorldView;
+
+  { Do not rebuild the inspector/tree while handling the inspector control's
+    mouse event. GTK2 can remain inside that control's double-click dispatch;
+    freeing the control from RefreshWorldView is re-entrant and can lock the
+    UI. Add the new authored Rule to the existing Rules branch instead. }
+  RuleNode := nil;
+  for I := 0 to WorldTree.Items.Count - 1 do
+    if WorldTree.Items[I].Data = Rule then
+    begin
+      RuleNode := WorldTree.Items[I];
+      Break;
+    end;
+
+  if RuleNode = nil then
+  begin
+    RulesNode := nil;
+    for I := 0 to WorldTree.Items.Count - 1 do
+      if (WorldTree.Items[I].Data = nil) and
+        SameText(WorldTree.Items[I].Text, 'Rules') then
+      begin
+        RulesNode := WorldTree.Items[I];
+        Break;
+      end;
+    if RulesNode <> nil then
+    begin
+      RuleNode := WorldTree.Items.AddChild(RulesNode, Rule.Name);
+      RuleNode.Data := Rule;
+      RulesNode.Expand(True);
+    end;
+  end;
+
+  { Update only the already-existing event metadata/value. Rebuilding the
+    inspector is deliberately deferred until normal selection changes. }
+  AProperty.Value := Rule.Name;
 end;
 
 procedure TWorldWrightMainForm.PropertyEditorPropertyChanged(
