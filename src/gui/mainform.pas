@@ -249,7 +249,7 @@ begin
     model used by persistence and exporters. }
   Editor := TWWRuleEditorForm.Create(Self);
   try
-    Editor.EditRule(FWorld, ARule);
+    Editor.EditRule(FWorld, ARule, FSession.CurrentRoom);
   finally
     Editor.Free;
   end;
