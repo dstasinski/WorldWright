@@ -339,9 +339,11 @@ begin
     end;
   end;
 
-  { Update only the already-existing event metadata/value. Rebuilding the
-    inspector is deliberately deferred until normal selection changes. }
+  { Update both neutral metadata and its existing event value surface in
+    place. Rebuilding the inspector here would destroy the GTK2 control while
+    its double-click event is still being dispatched. }
   AProperty.Value := Rule.Name;
+  PropertyEditor.RefreshPropertyValue(AProperty);
 end;
 
 procedure TWorldWrightMainForm.PropertyEditorPropertyChanged(
