@@ -81,8 +81,7 @@ type
     procedure ConfigureGrid(AGrid: TStringGrid);
     function PropertyForGridRow(AGrid: TStringGrid;
       ARow: Integer): TWWPropertyItem;
-    procedure GridSelectEditor(Sender: TObject; ACol, ARow: Integer;
-      var Editor: TWinControl);
+    procedure GridClick(Sender: TObject);
     procedure GridDrawCell(Sender: TObject; ACol, ARow: Integer;
       ARect: TRect; AState: TGridDrawState);
     procedure GridPrepareCanvas(Sender: TObject; ACol, ARow: Integer;
@@ -195,7 +194,7 @@ begin
   AGrid.Cells[0, 0] := 'Property';
   AGrid.Cells[1, 0] := 'Value';
   AGrid.TabStop := True;
-  AGrid.OnSelectEditor := @GridSelectEditor;
+  AGrid.OnClick := @GridClick;
   AGrid.OnDrawCell := @GridDrawCell;
   AGrid.OnPrepareCanvas := @GridPrepareCanvas;
 end;
@@ -212,9 +211,10 @@ begin
 
   WantedName := Trim(AGrid.Cells[0, ARow]);
   WantedValue := AGrid.Cells[1, ARow];
-  if WantedValue = '' then
-    Exit; { Category rows have no value and never map to metadata. }
 
+  { Category rows are identified structurally: their first-column caption is a
+    category name and no property has that displayed name in the row. Empty
+    property values are valid and must still map to their metadata. }
   for I := 0 to FProperties.Count - 1 do
     if (FProperties[I].Kind = wpkEvent) = (AGrid = FEventsGrid) then
       if SameText(FProperties[I].Name, WantedName) and
@@ -225,27 +225,20 @@ begin
       end;
 end;
 
-procedure TWWPropertyEditor.GridSelectEditor(Sender: TObject;
-  ACol, ARow: Integer; var Editor: TWinControl);
+procedure TWWPropertyEditor.GridClick(Sender: TObject);
 var
   Grid: TStringGrid;
   Prop: TWWPropertyItem;
 begin
   Grid := TStringGrid(Sender);
+  Prop := PropertyForGridRow(Grid, Grid.Row);
 
-  { Lazarus property editors expose editing capabilities by property type.
-    WorldWright follows the same principle without depending on IDE RTTI.
-    For this foundation slice, only plain text values use TStringGrid's
-    built-in editor. Other kinds will receive dedicated editors incrementally. }
-  if ACol <> 1 then
-  begin
-    Editor := nil;
-    Exit;
-  end;
-
-  Prop := PropertyForGridRow(Grid, ARow);
-  if (Prop = nil) or (Prop.Kind <> wpkText) then
-    Editor := nil;
+  { Property names are labels, not independent focus targets. Selecting one
+    moves the active cell to its Value partner, matching Object Inspector
+    behavior and making keyboard editing immediately useful. Category rows
+    remain section headers and do not redirect into a nonexistent value. }
+  if (Prop <> nil) and (Grid.Col = 0) then
+    Grid.Col := 1;
 end;
 
 procedure TWWPropertyEditor.GridDrawCell(Sender: TObject;
@@ -275,26 +268,18 @@ begin
     Exit;
   end;
 
-  { Category headings are one logical section header, not a property/value
-    pair. Draw the first cell across both columns and suppress the second-cell
-    divider/content so authors do not see a misleading empty Value field. }
-  if ACol = 0 then
-  begin
-    FullRect := ARect;
-    FullRect.Right := Grid.ClientWidth;
-    Grid.Canvas.Brush.Color := clBtnFace;
-    Grid.Canvas.FillRect(FullRect);
-    Grid.Canvas.Font.Style := [fsBold];
-    CategoryCaption := Grid.Cells[0, ARow];
-    Grid.Canvas.TextOut(FullRect.Left + 4, FullRect.Top +
-      (FullRect.Bottom - FullRect.Top - Grid.Canvas.TextHeight(CategoryCaption)) div 2,
-      CategoryCaption);
-  end
-  else
-  begin
-    Grid.Canvas.Brush.Color := clBtnFace;
-    Grid.Canvas.FillRect(ARect);
-  end;
+  { Category headings are one logical section header. Repaint the complete
+    logical row from either cell so TStringGrid selection/focus painting cannot
+    reveal a phantom Value cell after our custom drawing. }
+  FullRect := Grid.CellRect(0, ARow);
+  FullRect.Right := Grid.CellRect(1, ARow).Right;
+  Grid.Canvas.Brush.Color := clBtnFace;
+  Grid.Canvas.FillRect(FullRect);
+  Grid.Canvas.Font.Style := [fsBold];
+  CategoryCaption := Grid.Cells[0, ARow];
+  Grid.Canvas.TextOut(FullRect.Left + 4, FullRect.Top +
+    (FullRect.Bottom - FullRect.Top - Grid.Canvas.TextHeight(CategoryCaption)) div 2,
+    CategoryCaption);
 end;
 
 procedure TWWPropertyEditor.GridPrepareCanvas(Sender: TObject;
