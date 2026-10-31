@@ -1,0 +1,61 @@
+object WWRuleEditorForm: TWWRuleEditorForm
+  Left = 400
+  Height = 520
+  Top = 220
+  Width = 680
+  Caption = 'Rule Editor'
+  ClientHeight = 520
+  ClientWidth = 680
+  Font.Height = -16
+  Font.Size = 12
+  ParentFont = False
+  Position = poOwnerFormCenter
+  LCLVersion = '4.8.0.0'
+  object AddConditionButton: TButton
+    Left = 8
+    Height = 34
+    Top = 8
+    Width = 145
+    Caption = 'Add Condition...'
+    OnClick = AddConditionButtonClick
+    TabOrder = 0
+  end
+  object AddActionButton: TButton
+    Left = 161
+    Height = 34
+    Top = 8
+    Width = 120
+    Caption = 'Add Action...'
+    OnClick = AddActionButtonClick
+    TabOrder = 1
+  end
+  object DeleteItemButton: TButton
+    Left = 289
+    Height = 34
+    Top = 8
+    Width = 120
+    Caption = 'Delete Item...'
+    OnClick = DeleteItemButtonClick
+    TabOrder = 2
+  end
+  object CloseButton: TButton
+    Left = 552
+    Height = 34
+    Top = 478
+    Width = 120
+    Anchors = [akRight, akBottom]
+    Caption = 'Close'
+    ModalResult = 1
+    TabOrder = 4
+  end
+  object RuleMemo: TMemo
+    Left = 8
+    Height = 420
+    Top = 50
+    Width = 664
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    ReadOnly = True
+    ScrollBars = ssAutoVertical
+    TabOrder = 3
+  end
+end
