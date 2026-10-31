@@ -138,16 +138,18 @@ end;
   in the tree or grid. }
 procedure TWorldWrightMainForm.RefreshWorldView;
 var
-  WorldNode, RoomNode, InventoryNode, NewNode, SelectedNode: TTreeNode;
+  WorldNode, RoomNode, InventoryNode, RulesNode, NewNode, SelectedNode: TTreeNode;
   Room: TWorldRoom;
   WorldObject: TWorldObject;
+  Rule: TWorldRule;
   SelectedID: string;
-  SelectInventory, SelectWorld: Boolean;
+  SelectInventory, SelectRules, SelectWorld: Boolean;
 begin
   { Preserve logical selection before destroying the old nodes. Entity IDs are
     stable across a refresh and remain valid when TAKE/DROP changes a parent. }
   SelectedID := '';
   SelectInventory := False;
+  SelectRules := False;
   SelectWorld := False;
   if WorldTree.Selected <> nil then
   begin
@@ -156,6 +158,7 @@ begin
     else
     begin
       SelectInventory := SameText(WorldTree.Selected.Text, 'Inventory');
+      SelectRules := SameText(WorldTree.Selected.Text, 'Rules');
       SelectWorld := SameText(WorldTree.Selected.Text, 'World');
     end;
   end;
@@ -189,6 +192,17 @@ begin
       end;
   InventoryNode.Expand(True);
 
+  { Rules are authored project entities, not runtime state. Keep them under a
+    dedicated structural branch so they can be selected and edited without
+    pretending they belong to a room or the player's inventory. }
+  RulesNode := WorldTree.Items.AddChild(WorldNode, 'Rules');
+  for Rule in FWorld.Rules do
+  begin
+    NewNode := WorldTree.Items.AddChild(RulesNode, Rule.Name);
+    NewNode.Data := Rule;
+  end;
+  RulesNode.Expand(True);
+
   WorldNode.Expand(True);
 
   { Restore selection by model identity, never by the destroyed TTreeNode.
@@ -211,6 +225,8 @@ begin
   end
   else if SelectInventory then
     SelectedNode := InventoryNode
+  else if SelectRules then
+    SelectedNode := RulesNode
   else if SelectWorld then
     SelectedNode := WorldNode;
 
@@ -346,7 +362,9 @@ begin
   if SelectedEntity is TWorldObject then
     WorldTree.Selected.Text := ObjectTreeLabel(TWorldObject(SelectedEntity))
   else if SelectedEntity is TWorldRoom then
-    WorldTree.Selected.Text := RoomTreeLabel(TWorldRoom(SelectedEntity));
+    WorldTree.Selected.Text := RoomTreeLabel(TWorldRoom(SelectedEntity))
+  else if SelectedEntity is TWorldRule then
+    WorldTree.Selected.Text := SelectedEntity.Name;
 end;
 
 function TWorldWrightMainForm.EventRuleDisplay(
@@ -409,6 +427,28 @@ begin
   begin
     PropertyEditor.AddProperty('name', 'Name', 'Inventory', wpkReadOnly, 'Identity');
     PropertyEditor.AddProperty('kind', 'Kind', 'Player Inventory', wpkReadOnly, 'Identity');
+    Exit;
+  end;
+
+  if (WorldTree.Selected <> nil) and
+    (WorldTree.Selected.Data = nil) and
+    SameText(WorldTree.Selected.Text, 'Rules') then
+  begin
+    PropertyEditor.AddProperty('name', 'Name', 'Rules', wpkReadOnly, 'Identity');
+    PropertyEditor.AddProperty('kind', 'Kind', 'Rule Collection', wpkReadOnly, 'Identity');
+    PropertyEditor.AddProperty('rule_count', 'Rules',
+      IntToStr(FWorld.Rules.Count), wpkReadOnly, 'Contents');
+    Exit;
+  end;
+
+  if SelectedEntity is TWorldRule then
+  begin
+    PropertyEditor.AddProperty('name', 'Name', SelectedEntity.Name,
+      wpkText, 'Identity');
+    PropertyEditor.AddProperty('id', 'ID', SelectedEntity.ID,
+      wpkReadOnly, 'Identity');
+    PropertyEditor.AddProperty('kind', 'Kind', 'Rule',
+      wpkReadOnly, 'Identity');
     Exit;
   end;
 
