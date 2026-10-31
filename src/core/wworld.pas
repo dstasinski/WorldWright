@@ -123,10 +123,59 @@ type
 
   TWorldObjectList = specialize TObjectList<TWorldObject>;
 
-  { TWorldRule is the durable neutral identity referenced by semantic events.
-    Conditions and actions are intentionally deferred; this slice establishes
-    stable authored relationships before defining the rule language itself. }
+  { Conditions are neutral predicates evaluated by the WorldWright engine.
+    Operands are stable IDs or literal values according to Kind; exporters map
+    these semantics to their own target syntax. }
+  TWorldConditionKind = (wckEquals, wckNotEquals);
+
+  TWorldCondition = class
+  private
+    FKind: TWorldConditionKind;
+    FLeftOperand: string;
+    FRightOperand: string;
+  public
+    constructor Create(AKind: TWorldConditionKind;
+      const ALeftOperand, ARightOperand: string);
+    property Kind: TWorldConditionKind read FKind write FKind;
+    property LeftOperand: string read FLeftOperand write FLeftOperand;
+    property RightOperand: string read FRightOperand write FRightOperand;
+  end;
+
+  TWorldConditionList = specialize TObjectList<TWorldCondition>;
+
+  { Actions are ordered neutral effects. Stage 1 starts with Say because it is
+    sufficient to prove authored rule structure without prematurely defining
+    variables, movement, doors, or target-language scripting. }
+  TWorldActionKind = (wakSay);
+
+  TWorldAction = class
+  private
+    FKind: TWorldActionKind;
+    FValue: string;
+  public
+    constructor Create(AKind: TWorldActionKind; const AValue: string);
+    property Kind: TWorldActionKind read FKind write FKind;
+    property Value: string read FValue write FValue;
+  end;
+
+  TWorldActionList = specialize TObjectList<TWorldAction>;
+
+  { TWorldRule is the durable neutral behavior referenced by semantic events.
+    It owns ordered conditions and actions; neither contains exporter-specific
+    source code. }
   TWorldRule = class(TWorldEntity)
+  private
+    FConditions: TWorldConditionList;
+    FActions: TWorldActionList;
+  public
+    constructor Create(const AID, AName: string);
+    destructor Destroy; override;
+    function AddCondition(AKind: TWorldConditionKind;
+      const ALeftOperand, ARightOperand: string): TWorldCondition;
+    function AddAction(AKind: TWorldActionKind;
+      const AValue: string): TWorldAction;
+    property Conditions: TWorldConditionList read FConditions;
+    property Actions: TWorldActionList read FActions;
   end;
 
   TWorldRuleList = specialize TObjectList<TWorldRule>;
@@ -316,6 +365,50 @@ function TWorld.AddObject(const AID, AName: string;
 begin
   Result := TWorldObject.Create(AID, AName, ARoom);
   FObjects.Add(Result);
+end;
+
+constructor TWorldCondition.Create(AKind: TWorldConditionKind;
+  const ALeftOperand, ARightOperand: string);
+begin
+  inherited Create;
+  FKind := AKind;
+  FLeftOperand := ALeftOperand;
+  FRightOperand := ARightOperand;
+end;
+
+constructor TWorldAction.Create(AKind: TWorldActionKind; const AValue: string);
+begin
+  inherited Create;
+  FKind := AKind;
+  FValue := AValue;
+end;
+
+constructor TWorldRule.Create(const AID, AName: string);
+begin
+  inherited Create(AID, AName);
+  FConditions := TWorldConditionList.Create(True);
+  FActions := TWorldActionList.Create(True);
+end;
+
+destructor TWorldRule.Destroy;
+begin
+  FActions.Free;
+  FConditions.Free;
+  inherited Destroy;
+end;
+
+function TWorldRule.AddCondition(AKind: TWorldConditionKind;
+  const ALeftOperand, ARightOperand: string): TWorldCondition;
+begin
+  Result := TWorldCondition.Create(AKind, ALeftOperand, ARightOperand);
+  FConditions.Add(Result);
+end;
+
+function TWorldRule.AddAction(AKind: TWorldActionKind;
+  const AValue: string): TWorldAction;
+begin
+  Result := TWorldAction.Create(AKind, AValue);
+  FActions.Add(Result);
 end;
 
 function TWorld.AddRule(const AID, AName: string): TWorldRule;
