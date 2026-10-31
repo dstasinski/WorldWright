@@ -45,6 +45,8 @@ type
     function ObjectTreeLabel(AObject: TWorldObject): string;
     function RoomTreeLabel(ARoom: TWorldRoom): string;
     procedure ProcessPastedLines;
+    procedure PropertyEditorPropertyActivated(Sender: TObject;
+      AProperty: TWWPropertyItem);
     procedure PropertyEditorPropertyChanged(Sender: TObject;
       AProperty: TWWPropertyItem; const AOldValue, ANewValue: string;
       var Accept: Boolean);
@@ -69,6 +71,7 @@ begin
   FSession := TGameSession.Create(FWorld);
   FBuilder := TBuilderSession.Create(FWorld, FSession);
   PropertyEditor.OnPropertyChanged := @PropertyEditorPropertyChanged;
+  PropertyEditor.OnPropertyActivated := @PropertyEditorPropertyActivated;
   RefreshWorldView;
 
   WorkspaceMemo.Clear;
@@ -214,6 +217,59 @@ begin
   if SelectedNode <> nil then
     WorldTree.Selected := SelectedNode;
 
+  RefreshInspector;
+end;
+
+procedure TWorldWrightMainForm.PropertyEditorPropertyActivated(
+  Sender: TObject; AProperty: TWWPropertyItem);
+var
+  SelectedEntity: TWorldEntity;
+  Events: TWorldEventBindingList;
+  Binding: TWorldEventBinding;
+  Rule: TWorldRule;
+  EventName, RuleID, RuleName: string;
+begin
+  if (AProperty = nil) or (AProperty.Kind <> wpkEvent) or
+    (WorldTree.Selected = nil) or (WorldTree.Selected.Data = nil) then
+    Exit;
+
+  SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
+  if SelectedEntity is TWorldRoom then
+    Events := TWorldRoom(SelectedEntity).Events
+  else if SelectedEntity is TWorldObject then
+    Events := TWorldObject(SelectedEntity).Events
+  else
+    Exit;
+
+  { Inspector IDs remain UI metadata; the canonical semantic event name comes
+    from the selected entity's binding collection. Match the displayed name so
+    the component never needs WorldWright model knowledge. }
+  EventName := AProperty.Name;
+  Binding := FindEventBinding(Events, EventName);
+  if Binding = nil then
+    Exit;
+
+  Rule := nil;
+  if Trim(Binding.RuleID) <> '' then
+    Rule := FWorld.FindRuleByID(Binding.RuleID);
+
+  if Rule = nil then
+  begin
+    { Stable rule IDs derive from stable entity identity plus the semantic hook,
+      not from mutable display names. This first rule slice creates an empty
+      neutral rule; conditions/actions and the Rule Editor arrive separately. }
+    RuleID := SelectedEntity.ID + '_' + LowerCase(Copy(EventName, 3, MaxInt));
+    Rule := FWorld.FindRuleByID(RuleID);
+    if Rule = nil then
+    begin
+      RuleName := SelectedEntity.Name + ' ' + Copy(EventName, 3, MaxInt);
+      Rule := FWorld.AddRule(RuleID, RuleName);
+    end;
+    Binding.RuleID := Rule.ID;
+  end;
+
+  WorkspaceMemo.Lines.Add('');
+  WorkspaceMemo.Lines.Add('Rule: ' + Rule.Name + ' [' + Rule.ID + ']');
   RefreshInspector;
 end;
 
