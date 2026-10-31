@@ -11,28 +11,64 @@ object WWRuleEditorForm: TWWRuleEditorForm
   ParentFont = False
   Position = poOwnerFormCenter
   LCLVersion = '4.8.0.0'
-  object AddConditionButton: TButton
+  object ConditionKindCombo: TComboBox
     Left = 8
     Height = 34
     Top = 8
-    Width = 145
-    Caption = 'Add Condition...'
-    OnClick = AddConditionButtonClick
+    Width = 210
+    ItemHeight = 0
+    ItemIndex = 0
+    Items.Strings = (
+      'Player is in'
+      'Player is carrying'
+      'Object is in'
+      'Object is carried'
+    )
+    OnChange = ConditionKindComboChange
+    Style = csDropDownList
     TabOrder = 0
+    Text = 'Player is in'
   end
-  object AddActionButton: TButton
-    Left = 161
+  object ConditionLeftCombo: TComboBox
+    Left = 226
     Height = 34
     Top = 8
+    Width = 150
+    ItemHeight = 0
+    Style = csDropDownList
+    TabOrder = 1
+  end
+  object ConditionRightCombo: TComboBox
+    Left = 384
+    Height = 34
+    Top = 8
+    Width = 150
+    ItemHeight = 0
+    Style = csDropDownList
+    TabOrder = 2
+  end
+  object AddConditionButton: TButton
+    Left = 542
+    Height = 34
+    Top = 8
+    Width = 130
+    Caption = 'Add Condition'
+    OnClick = AddConditionButtonClick
+    TabOrder = 3
+  end
+  object AddActionButton: TButton
+    Left = 8
+    Height = 34
+    Top = 50
     Width = 120
     Caption = 'Add Action...'
     OnClick = AddActionButtonClick
     TabOrder = 1
   end
   object DeleteItemButton: TButton
-    Left = 289
+    Left = 136
     Height = 34
-    Top = 8
+    Top = 50
     Width = 120
     Caption = 'Delete Item...'
     OnClick = DeleteItemButtonClick
@@ -50,8 +86,8 @@ object WWRuleEditorForm: TWWRuleEditorForm
   end
   object RuleMemo: TMemo
     Left = 8
-    Height = 420
-    Top = 50
+    Height = 378
+    Top = 92
     Width = 664
     Anchors = [akTop, akLeft, akRight, akBottom]
     ReadOnly = True
