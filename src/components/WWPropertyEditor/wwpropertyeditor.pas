@@ -634,7 +634,13 @@ begin
         if Control.Tag <> PropertyIndex then
           Continue;
         if (AProperty.Kind = wpkEvent) and (Control is TPanel) then
-          TPanel(Control).Caption := '  ' + AProperty.Value
+        begin
+          { Event rows contain two tagged panels: the property-name cell on
+            the left and the activation/value surface on the right. Only the
+            latter starts at or beyond the divider. }
+          if Control.Left >= ((Row.ClientWidth * FDividerPercent) div 100) then
+            TPanel(Control).Caption := '  ' + AProperty.Value;
+        end
         else if Control is TEdit then
           TEdit(Control).Text := AProperty.Value
         else if Control is TComboBox then
