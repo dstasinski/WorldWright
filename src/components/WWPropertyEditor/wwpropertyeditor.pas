@@ -85,6 +85,7 @@ type
     procedure SetProperties(AValue: TWWPropertyItems);
     procedure SyncInspector;
     procedure ValueEditExit(Sender: TObject);
+    procedure ValueEditChange(Sender: TObject);
     procedure ValueEditKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure ValueComboExit(Sender: TObject);
     procedure DialogButtonClick(Sender: TObject);
@@ -203,7 +204,7 @@ var
   Category: string;
   CategorySeen: Boolean;
   CategoryPanel, RowPanel: TPanel;
-  NameCell: TPanel;
+  NameCell, EventValue: TPanel;
   ValueEdit: TEdit;
   ValueCombo: TComboBox;
   DialogButton: TButton;
@@ -283,15 +284,16 @@ begin
           { Event values are activation surfaces rather than inline text.
             The host decides whether activation creates or opens the neutral
             rule; the reusable inspector remains model-independent. }
-          ValueEdit := TEdit.Create(RowPanel);
-          ValueEdit.Parent := RowPanel;
-          ValueEdit.SetBounds(Divider, 3,
+          EventValue := TPanel.Create(RowPanel);
+          EventValue.Parent := RowPanel;
+          EventValue.SetBounds(Divider, 3,
             RowPanel.ClientWidth - Divider - 4, 27);
-          ValueEdit.Anchors := [akLeft, akTop, akRight];
-          ValueEdit.Text := FProperties[J].Value;
-          ValueEdit.Tag := J + 1;
-          ValueEdit.ReadOnly := True;
-          ValueEdit.OnDblClick := @EventValueClick;
+          EventValue.Anchors := [akLeft, akTop, akRight];
+          EventValue.Alignment := taLeftJustify;
+          EventValue.Caption := '  ' + FProperties[J].Value;
+          EventValue.BevelOuter := bvLowered;
+          EventValue.Tag := J + 1;
+          EventValue.OnDblClick := @EventValueClick;
         end
         else if FProperties[J].Kind = wpkDialog then
         begin
@@ -350,6 +352,7 @@ begin
           else
           begin
             ValueEdit.OnExit := @ValueEditExit;
+            ValueEdit.OnChange := @ValueEditChange;
             ValueEdit.OnKeyDown := @ValueEditKeyDown;
           end;
         end;
@@ -377,6 +380,14 @@ begin
       TEdit(ParentRow.Controls[I]).SetFocus;
       Exit;
     end;
+end;
+
+procedure TWWPropertyEditor.ValueEditChange(Sender: TObject);
+begin
+  { Single-line authored text is intentionally live: the host can update tree
+    labels and other projections as the author types. ValueEditExit remains as
+    a final commit/fallback path for widgetsets that defer change delivery. }
+  ValueEditExit(Sender);
 end;
 
 procedure TWWPropertyEditor.ValueEditKeyDown(Sender: TObject;
@@ -429,7 +440,7 @@ var
   Index: Integer;
   Prop: TWWPropertyItem;
 begin
-  Index := TEdit(Sender).Tag - 1;
+  Index := TControl(Sender).Tag - 1;
   if (Index < 0) or (Index >= FProperties.Count) then
     Exit;
   Prop := FProperties[Index];
