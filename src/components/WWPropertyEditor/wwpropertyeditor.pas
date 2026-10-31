@@ -159,8 +159,9 @@ var
   I, J, TopPos, Divider: Integer;
   Category: string;
   CategorySeen: Boolean;
-  HeaderPanel, CategoryPanel, RowPanel: TPanel;
-  HeaderProperty, HeaderValue, NameLabel: TLabel;
+  HeaderPanel, HeaderPropertyPanel, HeaderValuePanel,
+    CategoryPanel, RowPanel: TPanel;
+  NameLabel: TLabel;
   ValueEdit: TEdit;
 begin
   { Rows are rebuilt from metadata. They are disposable views; no authored
@@ -183,21 +184,24 @@ begin
   HeaderPanel.BevelOuter := bvNone;
   HeaderPanel.Caption := '';
 
-  HeaderProperty := TLabel.Create(HeaderPanel);
-  HeaderProperty.Parent := HeaderPanel;
-  HeaderProperty.SetBounds(8, 5, Divider - 12, 20);
-  HeaderProperty.AutoSize := False;
-  HeaderProperty.Caption := 'Property';
-  HeaderProperty.Font.Style := [fsBold];
+  HeaderPropertyPanel := TPanel.Create(HeaderPanel);
+  HeaderPropertyPanel.Parent := HeaderPanel;
+  HeaderPropertyPanel.SetBounds(0, 0, Divider, HeaderPanel.ClientHeight);
+  HeaderPropertyPanel.Anchors := [akLeft, akTop, akBottom];
+  HeaderPropertyPanel.Alignment := taLeftJustify;
+  HeaderPropertyPanel.Caption := '  Property';
+  HeaderPropertyPanel.Font.Style := [fsBold];
+  HeaderPropertyPanel.BevelOuter := bvLowered;
 
-  HeaderValue := TLabel.Create(HeaderPanel);
-  HeaderValue.Parent := HeaderPanel;
-  HeaderValue.SetBounds(Divider + 4, 5,
-    HeaderPanel.ClientWidth - Divider - 8, 20);
-  HeaderValue.AutoSize := False;
-  HeaderValue.Anchors := [akLeft, akTop, akRight];
-  HeaderValue.Caption := 'Value';
-  HeaderValue.Font.Style := [fsBold];
+  HeaderValuePanel := TPanel.Create(HeaderPanel);
+  HeaderValuePanel.Parent := HeaderPanel;
+  HeaderValuePanel.SetBounds(Divider, 0,
+    HeaderPanel.ClientWidth - Divider, HeaderPanel.ClientHeight);
+  HeaderValuePanel.Anchors := [akLeft, akTop, akRight, akBottom];
+  HeaderValuePanel.Alignment := taLeftJustify;
+  HeaderValuePanel.Caption := '  Value';
+  HeaderValuePanel.Font.Style := [fsBold];
+  HeaderValuePanel.BevelOuter := bvLowered;
   Inc(TopPos, HeaderPanel.Height);
 
   for I := 0 to FProperties.Count - 1 do
