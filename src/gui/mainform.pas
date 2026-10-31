@@ -45,6 +45,7 @@ type
     function ObjectTreeLabel(AObject: TWorldObject): string;
     function RoomTreeLabel(ARoom: TWorldRoom): string;
     procedure ProcessPastedLines;
+    procedure OpenRuleEditor(ARule: TWorldRule);
     procedure PropertyEditorPropertyActivated(Sender: TObject;
       AProperty: TWWPropertyItem);
     procedure PropertyEditorPropertyChanged(Sender: TObject;
@@ -236,6 +237,26 @@ begin
   RefreshInspector;
 end;
 
+procedure TWorldWrightMainForm.OpenRuleEditor(ARule: TWorldRule);
+begin
+  if ARule = nil then
+    Exit;
+
+  { Stage 1 Rule Editor lives in the central workspace. It deliberately shows
+    only neutral WorldWright identity plus the two semantic sections that will
+    gain structured editors next. No Pascal, Inform, or TADS source belongs
+    here. }
+  WorkspaceMemo.Clear;
+  WorkspaceMemo.Lines.Add('RULE: ' + ARule.Name);
+  WorkspaceMemo.Lines.Add('ID: ' + ARule.ID);
+  WorkspaceMemo.Lines.Add('');
+  WorkspaceMemo.Lines.Add('Conditions');
+  WorkspaceMemo.Lines.Add('  (none)');
+  WorkspaceMemo.Lines.Add('');
+  WorkspaceMemo.Lines.Add('Actions');
+  WorkspaceMemo.Lines.Add('  (none)');
+end;
+
 procedure TWorldWrightMainForm.PropertyEditorPropertyActivated(
   Sender: TObject; AProperty: TWWPropertyItem);
 var
@@ -286,8 +307,7 @@ begin
     Binding.RuleID := Rule.ID;
   end;
 
-  WorkspaceMemo.Lines.Add('');
-  WorkspaceMemo.Lines.Add('Rule: ' + Rule.Name + ' [' + Rule.ID + ']');
+  OpenRuleEditor(Rule);
 
   { Do not rebuild the inspector/tree while handling the inspector control's
     mouse event. GTK2 can remain inside that control's double-click dispatch;
@@ -586,10 +606,14 @@ begin
     Exit;
 
   SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
-  if not (SelectedEntity is TWorldRoom) then
+  if SelectedEntity is TWorldRule then
+  begin
+    OpenRuleEditor(TWorldRule(SelectedEntity));
     Exit;
+  end;
 
-  ExecuteInputLine('@MOVE ' + SelectedEntity.ID);
+  if SelectedEntity is TWorldRoom then
+    ExecuteInputLine('@MOVE ' + SelectedEntity.ID);
 end;
 
 procedure TWorldWrightMainForm.WorldTreeSelectionChanged(Sender: TObject);
