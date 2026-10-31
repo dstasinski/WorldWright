@@ -283,9 +283,13 @@ begin
   if not Accept then
     Exit;
 
-  { Rebuild labels from the model immediately. Stable entity IDs preserve the
-    selected node even though its displayed room/object name may have changed. }
-  RefreshWorldView;
+  { Property edits do not change tree structure. Update the selected label in
+    place instead of rebuilding the complete tree and inspector. This keeps
+    typing/selection responsive and makes Name/Tag changes visible immediately. }
+  if SelectedEntity is TWorldObject then
+    WorldTree.Selected.Text := ObjectTreeLabel(TWorldObject(SelectedEntity))
+  else if SelectedEntity is TWorldRoom then
+    WorldTree.Selected.Text := RoomTreeLabel(TWorldRoom(SelectedEntity));
 end;
 
 procedure TWorldWrightMainForm.RefreshInspector;
@@ -300,7 +304,9 @@ begin
   { TWWPropertyEditor is only a presentation/editor surface. MainForm adapts
     selected WorldWright entities into neutral property metadata; the component
     itself remains independent of the world model. }
-  PropertyEditor.Clear;
+  PropertyEditor.BeginUpdate;
+  try
+    PropertyEditor.Clear;
 
   SelectedEntity := nil;
   if (WorldTree.Selected <> nil) and (WorldTree.Selected.Data <> nil) then
@@ -351,7 +357,6 @@ begin
       knows nothing about TWorldRoom; MainForm remains the model adapter. }
     for RoomChoice in FWorld.Rooms do
       LocationProperty.Choices.Add(RoomChoice.Name);
-    PropertyEditor.Refresh;
 
     if FSession.IsObjectCarried(SelectedObject) then
       LocationText := 'Inventory'
@@ -375,6 +380,9 @@ begin
   PropertyEditor.AddProperty('kind', 'Kind', 'Room', wpkReadOnly, 'Identity');
   PropertyEditor.AddProperty('description', 'Description',
     SelectedRoom.Description, wpkText, 'Appearance');
+  finally
+    PropertyEditor.EndUpdate;
+  end;
 end;
 
 procedure TWorldWrightMainForm.GoHereMenuItemClick(Sender: TObject);
