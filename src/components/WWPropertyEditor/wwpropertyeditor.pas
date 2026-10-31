@@ -213,7 +213,7 @@ var
   Grid: TStringGrid;
   Prop: TWWPropertyItem;
   FullRect: TRect;
-  Caption: string;
+  CategoryCaption: string;
 begin
   Grid := TStringGrid(Sender);
   if ARow = 0 then
@@ -233,10 +233,10 @@ begin
     Grid.Canvas.Brush.Color := clBtnFace;
     Grid.Canvas.FillRect(FullRect);
     Grid.Canvas.Font.Style := [fsBold];
-    Caption := Grid.Cells[0, ARow];
+    CategoryCaption := Grid.Cells[0, ARow];
     Grid.Canvas.TextOut(FullRect.Left + 4, FullRect.Top +
-      (FullRect.Bottom - FullRect.Top - Grid.Canvas.TextHeight(Caption)) div 2,
-      Caption);
+      (FullRect.Bottom - FullRect.Top - Grid.Canvas.TextHeight(CategoryCaption)) div 2,
+      CategoryCaption);
   end
   else
   begin
