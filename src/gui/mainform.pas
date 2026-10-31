@@ -243,6 +243,27 @@ begin
     SelectedEntity.Name := NewName;
     Accept := True;
   end
+  else if SameText(AProperty.ID, 'tag') and
+    (SelectedEntity is TWorldObject) then
+  begin
+    { Tag is authored player-facing vocabulary. Empty is valid and means the
+      object's Name remains its normal display/reference fallback. }
+    TWorldObject(SelectedEntity).Tag := ANewValue;
+    Accept := True;
+  end
+  else if SameText(AProperty.ID, 'description') then
+  begin
+    { Descriptions are authored definition text. Runtime sessions read the
+      definition when LOOK/EXAMINE executes, so no runtime-state mutation or
+      synchronization is required. }
+    if SelectedEntity is TWorldObject then
+      TWorldObject(SelectedEntity).Description := ANewValue
+    else if SelectedEntity is TWorldRoom then
+      TWorldRoom(SelectedEntity).Description := ANewValue
+    else
+      Exit;
+    Accept := True;
+  end
   else if SameText(AProperty.ID, 'initial_location') and
     (SelectedEntity is TWorldObject) then
   begin
