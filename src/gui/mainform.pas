@@ -221,6 +221,8 @@ procedure TWorldWrightMainForm.PropertyEditorPropertyChanged(
 var
   NewName: string;
   SelectedEntity: TWorldEntity;
+  SelectedObject: TWorldObject;
+  Room: TWorldRoom;
 begin
   Accept := False;
 
@@ -228,18 +230,37 @@ begin
     This first editing slice deliberately enables only Name; Tag and
     Description remain displayed as text-kind metadata but will receive their
     own model-backed handlers in subsequent slices. }
-  if not SameText(AProperty.ID, 'name') then
-    Exit;
   if (WorldTree.Selected = nil) or (WorldTree.Selected.Data = nil) then
     Exit;
 
   SelectedEntity := TWorldEntity(WorldTree.Selected.Data);
-  NewName := Trim(ANewValue);
-  if NewName = '' then
-    Exit;
 
-  SelectedEntity.Name := NewName;
-  Accept := True;
+  if SameText(AProperty.ID, 'name') then
+  begin
+    NewName := Trim(ANewValue);
+    if NewName = '' then
+      Exit;
+    SelectedEntity.Name := NewName;
+    Accept := True;
+  end
+  else if SameText(AProperty.ID, 'initial_location') and
+    (SelectedEntity is TWorldObject) then
+  begin
+    { This is an authored-state edit only. MoveToRoom changes the object's
+      project initial location; the active TGameSession deliberately remains
+      untouched until an explicit test reset. }
+    SelectedObject := TWorldObject(SelectedEntity);
+    for Room in FWorld.Rooms do
+      if SameText(Room.Name, ANewValue) then
+      begin
+        SelectedObject.MoveToRoom(Room);
+        Accept := True;
+        Break;
+      end;
+  end;
+
+  if not Accept then
+    Exit;
 
   { Rebuild labels from the model immediately. Stable entity IDs preserve the
     selected node even though its displayed room/object name may have changed. }
@@ -252,6 +273,8 @@ var
   SelectedObject: TWorldObject;
   SelectedRoom: TWorldRoom;
   LocationText: string;
+  LocationProperty: TWWPropertyItem;
+  RoomChoice: TWorldRoom;
 begin
   { TWWPropertyEditor is only a presentation/editor surface. MainForm adapts
     selected WorldWright entities into neutral property metadata; the component
@@ -301,8 +324,13 @@ begin
       LocationText := SelectedObject.Room.Name
     else
       LocationText := '';
-    PropertyEditor.AddProperty('initial_location', 'Initial Location',
-      LocationText, wpkReadOnly, 'Location');
+    LocationProperty := PropertyEditor.AddProperty('initial_location',
+      'Initial Location', LocationText, wpkReference, 'Location');
+    { References are supplied as neutral display choices. The property editor
+      knows nothing about TWorldRoom; MainForm remains the model adapter. }
+    for RoomChoice in FWorld.Rooms do
+      LocationProperty.Choices.Add(RoomChoice.Name);
+    PropertyEditor.Refresh;
 
     if FSession.IsObjectCarried(SelectedObject) then
       LocationText := 'Inventory'
