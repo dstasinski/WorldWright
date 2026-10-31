@@ -9,7 +9,7 @@ var
   World: TWorld;
   Laboratory, Hallway: TWorldRoom;
   Session: TGameSession;
-  BrassKey, Apple: TWorldObject;
+  BrassKey, Apple, Dog: TWorldObject;
   Output: string;
 
 procedure Check(ACondition: Boolean; const AMessage: string);
@@ -54,6 +54,13 @@ begin
       Output := Session.ExecuteCommand('look');
       Check(Pos('an old apple', Output) > 0,
         'LOOK did not apply an before a vowel-leading Tag noun phrase');
+      Check(Pos('a tarnished brass key and an old apple', Output) > 0,
+        'LOOK did not join two room objects with and');
+
+      Dog := World.AddObject('dog', 'dog', Laboratory);
+      Output := Session.ExecuteCommand('look');
+      Check(Pos('a tarnished brass key, an old apple, and a dog', Output) > 0,
+        'LOOK did not format three room objects with an Oxford comma');
 
       Output := Session.ExecuteCommand('examine brass key');
       Check(Pos('a tarnished brass key', Output) > 0,
