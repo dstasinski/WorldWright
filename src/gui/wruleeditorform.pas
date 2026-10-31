@@ -28,11 +28,13 @@ type
   private
     FRule: TWorldRule;
     FWorld: TWorld;
+    FDefaultRoom: TWorldRoom;
     function EntityNameByID(const AID: string): string;
     procedure RefreshConditionChoices;
     procedure RefreshRuleView;
   public
-    procedure EditRule(AWorld: TWorld; ARule: TWorldRule);
+    procedure EditRule(AWorld: TWorld; ARule: TWorldRule;
+      ADefaultRoom: TWorldRoom);
   end;
 
 implementation
@@ -98,12 +100,14 @@ begin
     end;
 end;
 
-procedure TWWRuleEditorForm.EditRule(AWorld: TWorld; ARule: TWorldRule);
+procedure TWWRuleEditorForm.EditRule(AWorld: TWorld; ARule: TWorldRule;
+  ADefaultRoom: TWorldRoom);
 begin
   if ARule = nil then
     Exit;
   FWorld := AWorld;
   FRule := ARule;
+  FDefaultRoom := ADefaultRoom;
   Caption := 'Rule Editor - ' + FRule.Name;
   ConditionKindCombo.ItemIndex := 0;
   RefreshConditionChoices;
@@ -162,6 +166,18 @@ begin
 
   if ConditionLeftCombo.Items.Count > 0 then ConditionLeftCombo.ItemIndex := 0;
   if ConditionRightCombo.Items.Count > 0 then ConditionRightCombo.ItemIndex := 0;
+
+  { Room-valued conditions default to the play-test room the author is
+    currently in. Match by stable room identity rather than display name so a
+    renamed or duplicate-named room cannot select the wrong authored entity. }
+  if (FDefaultRoom <> nil) and
+     (ConditionKindCombo.ItemIndex in [0, 2]) then
+    for Room in FWorld.Rooms do
+      if Room = FDefaultRoom then
+      begin
+        ConditionRightCombo.ItemIndex := FWorld.Rooms.IndexOf(Room);
+        Break;
+      end;
 end;
 
 procedure TWWRuleEditorForm.ConditionKindComboChange(Sender: TObject);
