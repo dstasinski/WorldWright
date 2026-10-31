@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, ComCtrls, ExtCtrls, StdCtrls, Menus, Dialogs,
-  WWorld, WGameSession, WBuilderSession, WWPropertyEditor;
+  WWorld, WGameSession, WBuilderSession, WWPropertyEditor, WRuleEditorForm;
 
 type
   { TWorldWrightMainForm is WorldWright's single top-level application window.
@@ -14,15 +14,11 @@ type
     the live model and game session; parser/engine behavior belongs outside
     the form. }
   TWorldWrightMainForm = class(TForm)
-    AddRuleActionButton: TButton;
-    AddRuleConditionButton: TButton;
-    DeleteRuleItemButton: TButton;
     CenterPanel: TPanel;
     CommandMemo: TMemo;
     CommandPanel: TPanel;
     GoHereMenuItem: TMenuItem;
     PropertyEditor: TWWPropertyEditor;
-    RuleEditorPanel: TPanel;
     LeftPanel: TPanel;
     WorldTreePopupMenu: TPopupMenu;
     RightPanel: TPanel;
@@ -30,10 +26,7 @@ type
     SplitRight: TSplitter;
     WorkspaceMemo: TMemo;
     WorldTree: TTreeView;
-    procedure AddRuleActionButtonClick(Sender: TObject);
-    procedure AddRuleConditionButtonClick(Sender: TObject);
     procedure CommandMemoChange(Sender: TObject);
-    procedure DeleteRuleItemButtonClick(Sender: TObject);
     procedure CommandMemoKeyPress(Sender: TObject; var Key: char);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -47,7 +40,6 @@ type
     FSession: TGameSession;
     FBuilder: TBuilderSession;
     FProcessingInput: Boolean;
-    FCurrentRule: TWorldRule;
     procedure BuildStarterWorld;
     procedure ExecuteInputLine(const ACommand: string);
     function ObjectTreeLabel(AObject: TWorldObject): string;
@@ -75,8 +67,6 @@ implementation
 
 procedure TWorldWrightMainForm.FormCreate(Sender: TObject);
 begin
-  FCurrentRule := nil;
-  RuleEditorPanel.Visible := False;
   FWorld := TWorld.Create;
   BuildStarterWorld;
   FSession := TGameSession.Create(FWorld);
@@ -247,167 +237,22 @@ begin
   RefreshInspector;
 end;
 
-procedure TWorldWrightMainForm.DeleteRuleItemButtonClick(Sender: TObject);
-var
-  ItemText: string;
-  ItemNumber, ConditionCount: Integer;
-begin
-  if FCurrentRule = nil then
-    Exit;
-
-  if (FCurrentRule.Conditions.Count = 0) and
-     (FCurrentRule.Actions.Count = 0) then
-  begin
-    MessageDlg('Delete Rule Item', 'This rule has no items to delete.',
-      mtInformation, [mbOK], 0);
-    Exit;
-  end;
-
-  ItemText := '';
-  if not InputQuery('Delete Rule Item',
-    'Item number (conditions first, then actions):', ItemText) then
-    Exit;
-  if not TryStrToInt(Trim(ItemText), ItemNumber) then
-  begin
-    MessageDlg('Delete Rule Item', 'Enter a valid item number.',
-      mtError, [mbOK], 0);
-    Exit;
-  end;
-
-  ConditionCount := FCurrentRule.Conditions.Count;
-  if (ItemNumber >= 1) and (ItemNumber <= ConditionCount) then
-    FCurrentRule.Conditions.Delete(ItemNumber - 1)
-  else if (ItemNumber > ConditionCount) and
-          (ItemNumber <= ConditionCount + FCurrentRule.Actions.Count) then
-    FCurrentRule.Actions.Delete(ItemNumber - ConditionCount - 1)
-  else
-  begin
-    MessageDlg('Delete Rule Item', 'That item number does not exist.',
-      mtError, [mbOK], 0);
-    Exit;
-  end;
-
-  OpenRuleEditor(FCurrentRule);
-end;
-
-procedure TWorldWrightMainForm.AddRuleConditionButtonClick(Sender: TObject);
-var
-  LeftOperand, OperatorText, RightOperand: string;
-  Kind: TWorldConditionKind;
-begin
-  if FCurrentRule = nil then
-    Exit;
-
-  LeftOperand := '';
-  if not InputQuery('Add Condition', 'Left operand:', LeftOperand) then
-    Exit;
-  if Trim(LeftOperand) = '' then
-    Exit;
-
-  OperatorText := '=';
-  if not InputQuery('Add Condition',
-    'Operator (= or <>):', OperatorText) then
-    Exit;
-  OperatorText := Trim(OperatorText);
-  if OperatorText = '=' then
-    Kind := wckEquals
-  else if OperatorText = '<>' then
-    Kind := wckNotEquals
-  else
-  begin
-    MessageDlg('Add Condition',
-      'Operator must be = or <>.', mtError, [mbOK], 0);
-    Exit;
-  end;
-
-  RightOperand := '';
-  if not InputQuery('Add Condition', 'Right operand:', RightOperand) then
-    Exit;
-  if Trim(RightOperand) = '' then
-    Exit;
-
-  { This first condition editor captures only neutral operands and the semantic
-    comparison kind. Operand typing/resolution will be added as the rule
-    language gains variables and entity-state predicates. }
-  FCurrentRule.AddCondition(Kind, LeftOperand, RightOperand);
-  OpenRuleEditor(FCurrentRule);
-end;
-
-procedure TWorldWrightMainForm.AddRuleActionButtonClick(Sender: TObject);
-var
-  TextValue: string;
-begin
-  if FCurrentRule = nil then
-    Exit;
-
-  TextValue := '';
-  if not InputQuery('Add Say Action', 'Text to say:', TextValue) then
-    Exit;
-  if Trim(TextValue) = '' then
-    Exit;
-
-  { The GUI mutates the same neutral rule model used by persistence and future
-    exporters. The dialog gathers only the semantic Say payload; it does not
-    accept target-language source code. }
-  FCurrentRule.AddAction(wakSay, TextValue);
-  OpenRuleEditor(FCurrentRule);
-end;
-
 procedure TWorldWrightMainForm.OpenRuleEditor(ARule: TWorldRule);
 var
-  I: Integer;
-  Condition: TWorldCondition;
-  RuleAction: TWorldAction;
-  OperatorText, ActionText: string;
+  Editor: TWWRuleEditorForm;
 begin
   if ARule = nil then
     Exit;
 
-  FCurrentRule := ARule;
-  { The panel is designer-owned but starts hidden. GTK2 can leave an alBottom
-    sibling behind an alClient control when it becomes visible after initial
-    alignment. Bring it forward and explicitly realign the parent so the Rule
-    controls occupy their reserved strip immediately. }
-  RuleEditorPanel.Visible := True;
-  RuleEditorPanel.BringToFront;
-  CenterPanel.Realign;
-
-  { The first Rule Editor view is model-backed and read-only. Showing the real
-    ordered semantic lists now keeps the workspace truthful while mutation
-    controls are introduced separately. No exporter-specific source is shown. }
-  WorkspaceMemo.Clear;
-  WorkspaceMemo.Lines.Add('RULE: ' + ARule.Name);
-  WorkspaceMemo.Lines.Add('ID: ' + ARule.ID);
-  WorkspaceMemo.Lines.Add('');
-  WorkspaceMemo.Lines.Add('Conditions');
-  if ARule.Conditions.Count = 0 then
-    WorkspaceMemo.Lines.Add('  (none)')
-  else
-    for I := 0 to ARule.Conditions.Count - 1 do
-    begin
-      Condition := ARule.Conditions[I];
-      case Condition.Kind of
-        wckEquals: OperatorText := '=';
-        wckNotEquals: OperatorText := '<>';
-      end;
-      WorkspaceMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' +
-        Condition.LeftOperand + ' ' + OperatorText + ' ' +
-        Condition.RightOperand);
-    end;
-
-  WorkspaceMemo.Lines.Add('');
-  WorkspaceMemo.Lines.Add('Actions');
-  if ARule.Actions.Count = 0 then
-    WorkspaceMemo.Lines.Add('  (none)')
-  else
-    for I := 0 to ARule.Actions.Count - 1 do
-    begin
-      RuleAction := ARule.Actions[I];
-      case RuleAction.Kind of
-        wakSay: ActionText := 'Say "' + RuleAction.Value + '"';
-      end;
-      WorkspaceMemo.Lines.Add('  ' + IntToStr(ARule.Conditions.Count + I + 1) + '. ' + ActionText);
-    end;
+  { Rules are edited in a focused modal surface rather than borrowing the main
+    transcript workspace. The dialog edits the same neutral authored Rule
+    model used by persistence and exporters. }
+  Editor := TWWRuleEditorForm.Create(Self);
+  try
+    Editor.EditRule(ARule);
+  finally
+    Editor.Free;
+  end;
 end;
 
 procedure TWorldWrightMainForm.PropertyEditorPropertyActivated(
