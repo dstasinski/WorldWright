@@ -159,8 +159,8 @@ var
   I, J, TopPos, Divider: Integer;
   Category: string;
   CategorySeen: Boolean;
-  CategoryPanel, RowPanel: TPanel;
-  NameLabel: TLabel;
+  HeaderPanel, CategoryPanel, RowPanel: TPanel;
+  HeaderProperty, HeaderValue, NameLabel: TLabel;
   ValueEdit: TEdit;
 begin
   { Rows are rebuilt from metadata. They are disposable views; no authored
@@ -172,6 +172,33 @@ begin
   Divider := (ABox.ClientWidth * FDividerPercent) div 100;
   if Divider < 80 then
     Divider := 80;
+
+  { Keep the familiar Object Inspector column captions above the categorized
+    rows. The header is presentation only; category rows below still span the
+    full width and are not divided into property/value cells. }
+  HeaderPanel := TPanel.Create(ABox);
+  HeaderPanel.Parent := ABox;
+  HeaderPanel.SetBounds(0, TopPos, ABox.ClientWidth, 28);
+  HeaderPanel.Anchors := [akLeft, akTop, akRight];
+  HeaderPanel.BevelOuter := bvNone;
+  HeaderPanel.Caption := '';
+
+  HeaderProperty := TLabel.Create(HeaderPanel);
+  HeaderProperty.Parent := HeaderPanel;
+  HeaderProperty.SetBounds(8, 5, Divider - 12, 20);
+  HeaderProperty.AutoSize := False;
+  HeaderProperty.Caption := 'Property';
+  HeaderProperty.Font.Style := [fsBold];
+
+  HeaderValue := TLabel.Create(HeaderPanel);
+  HeaderValue.Parent := HeaderPanel;
+  HeaderValue.SetBounds(Divider + 4, 5,
+    HeaderPanel.ClientWidth - Divider - 8, 20);
+  HeaderValue.AutoSize := False;
+  HeaderValue.Anchors := [akLeft, akTop, akRight];
+  HeaderValue.Caption := 'Value';
+  HeaderValue.Font.Style := [fsBold];
+  Inc(TopPos, HeaderPanel.Height);
 
   for I := 0 to FProperties.Count - 1 do
   begin
@@ -213,14 +240,17 @@ begin
       begin
         RowPanel := TPanel.Create(ABox);
         RowPanel.Parent := ABox;
-        RowPanel.SetBounds(0, TopPos, ABox.ClientWidth, 30);
+        { GTK2 draws the focused TEdit frame outside part of its text area.
+          Leave vertical breathing room so the lower focus border is never
+          clipped by the next row. }
+        RowPanel.SetBounds(0, TopPos, ABox.ClientWidth, 34);
         RowPanel.Anchors := [akLeft, akTop, akRight];
         RowPanel.BevelOuter := bvNone;
         RowPanel.Caption := '';
 
         NameLabel := TLabel.Create(RowPanel);
         NameLabel.Parent := RowPanel;
-        NameLabel.SetBounds(8, 6, Divider - 12, 22);
+        NameLabel.SetBounds(8, 7, Divider - 12, 22);
         NameLabel.AutoSize := False;
         NameLabel.Caption := FProperties[J].Name;
         NameLabel.Tag := J + 1;
@@ -228,8 +258,8 @@ begin
 
         ValueEdit := TEdit.Create(RowPanel);
         ValueEdit.Parent := RowPanel;
-        ValueEdit.SetBounds(Divider, 2,
-          RowPanel.ClientWidth - Divider - 2, 26);
+        ValueEdit.SetBounds(Divider, 3,
+          RowPanel.ClientWidth - Divider - 4, 27);
         ValueEdit.Anchors := [akLeft, akTop, akRight];
         ValueEdit.Text := FProperties[J].Value;
         ValueEdit.Tag := J + 1;
