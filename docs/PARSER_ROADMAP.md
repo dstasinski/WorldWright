@@ -2,7 +2,9 @@
 
 **Status: Deferred design proposal. Do not implement until explicitly scheduled.**
 
-WorldWright should ultimately offer a deterministic, offline-first, extensible natural-language parser. The player input pipeline should be:
+WorldWright is an **authoring and testing tool**, not a game-play distribution platform. Its internal play mode exists solely to design, preview, debug, and test games intended for export to **Inform 6, Inform 7, and TADS**. The exported game's target interpreter/runtime is the end-user play platform.
+
+WorldWright should offer a deterministic, offline-first, extensible natural-language parser for authoring and test sessions. Export fidelity is a primary design constraint: favor target-supported semantics and explicitly flag target-specific differences rather than growing a separate proprietary play platform. The player input pipeline should be:
 
 1. Tokenization, vocabulary and grammar recognition.
 2. Semantic action and entity resolution.
@@ -34,7 +36,10 @@ A Parser Debugger should show input, recognized action, grammar match, resolved 
 ## Export and runtime constraints
 
 - All definitions remain neutral WorldWright model data, not Inform/TADS source.
-- Runtime is deterministic and works offline; AI assistance is optional at authoring time, never required to play exported games.
+- **Never use AI for game play**, including interpreting player commands, choosing actions, generating in-game responses, or resolving ambiguity. This applies to both WorldWright test sessions and exported games.
+- AI, if offered at all, is restricted to optional authoring assistance (e.g. suggesting vocabulary or prose) and cannot become a runtime dependency.
+- WorldWright's internal game session is a design/testing harness only, never a target player platform or substitute for Inform/TADS interpreters.
+- Export to Inform 6, Inform 7, and TADS is the product's purpose; their parser and runtime capabilities constrain neutral-model design.
 - Exporters map supported semantics into Inform 7 and TADS 3 and report unsupported behavior explicitly rather than silently dropping it.
 - Test native and exported behavior for parity.
 - Preserve strict authored-vs-runtime-state separation.
@@ -48,6 +53,6 @@ A Parser Debugger should show input, recognized action, grammar match, resolved 
 5. Hierarchical customizable failure responses.
 6. Reusable action/behavior libraries.
 7. Vocabulary and Actions GUI editors and Parser Debugger.
-8. Inform/TADS export support and behavioral parity tests.
+8. Inform 6 / Inform 7 / TADS export support and behavioral parity tests.
 
 **Planning note:** Establish the neutral vocabulary/action model before expanding the Rule Editor deeply, to avoid baking string-expression semantics into its UI. This is an architectural direction, not approval to start coding.
