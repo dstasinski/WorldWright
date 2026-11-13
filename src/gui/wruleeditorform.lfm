@@ -70,7 +70,7 @@ object WWRuleEditorForm: TWWRuleEditorForm
     Height = 34
     Top = 50
     Width = 120
-    Caption = 'Delete Item...'
+    Caption = 'Delete Selected'
     OnClick = DeleteItemButtonClick
     TabOrder = 2
   end
@@ -84,14 +84,43 @@ object WWRuleEditorForm: TWWRuleEditorForm
     ModalResult = 1
     TabOrder = 4
   end
-  object RuleMemo: TMemo
+  object RuleTitleLabel: TLabel
     Left = 8
-    Height = 378
     Top = 92
     Width = 664
+    Height = 24
+    Caption = 'Rule'
+  end
+  object ConditionsLabel: TLabel
+    Left = 8
+    Top = 124
+    Width = 200
+    Height = 24
+    Caption = 'Conditions'
+  end
+  object ConditionsList: TListBox
+    Left = 8
+    Top = 152
+    Width = 664
+    Height = 132
+    Anchors = [akTop, akLeft, akRight]
+    OnClick = ConditionsListClick
+    TabOrder = 5
+  end
+  object ActionsLabel: TLabel
+    Left = 8
+    Top = 292
+    Width = 200
+    Height = 24
+    Caption = 'Actions'
+  end
+  object ActionsList: TListBox
+    Left = 8
+    Top = 320
+    Width = 664
+    Height = 150
     Anchors = [akTop, akLeft, akRight, akBottom]
-    ReadOnly = True
-    ScrollBars = ssAutoVertical
-    TabOrder = 3
+    OnClick = ActionsListClick
+    TabOrder = 6
   end
 end
