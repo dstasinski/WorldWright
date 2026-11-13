@@ -45,6 +45,8 @@ type
     procedure RefreshConditionChoices;
     procedure RefreshRuleView;
     procedure MoveSelected(ADirection: Integer);
+    function ConditionConflict(AKind: TWorldConditionKind;
+      const ALeftID, ARightID: string; AEditing: TWorldCondition): string;
   public
     procedure EditRule(AWorld: TWorld; ARule: TWorldRule;
       ADefaultRoom: TWorldRoom);
@@ -201,10 +203,57 @@ begin
   RefreshConditionChoices;
 end;
 
+{ All current conditions are conjunctive. Reject repeated predicates and
+  mutually exclusive locations before changing the authored rule. The edited
+  instance is excluded so saving an unchanged condition remains valid. }
+function TWWRuleEditorForm.ConditionConflict(AKind: TWorldConditionKind;
+  const ALeftID, ARightID: string; AEditing: TWorldCondition): string;
+var
+  C: TWorldCondition;
+begin
+  Result := '';
+  for C in FRule.Conditions do
+  begin
+    if C = AEditing then Continue;
+    if (C.Kind = AKind) and SameText(C.LeftOperand, ALeftID) and
+       SameText(C.RightOperand, ARightID) then
+      Exit('This condition already exists in the rule.');
+
+    if (AKind = wckPlayerInRoom) and (C.Kind = wckPlayerInRoom) and
+       not SameText(C.RightOperand, ARightID) then
+      Exit('The player cannot be in two different rooms at the same time.');
+
+    if (AKind = wckObjectInRoom) and (C.Kind = wckObjectInRoom) and
+       SameText(C.LeftOperand, ALeftID) and
+       not SameText(C.RightOperand, ARightID) then
+      Exit('The same object cannot be in two different rooms at the same time.');
+
+    if (AKind = wckObjectInRoom) and (C.Kind = wckObjectCarried) and
+       SameText(C.LeftOperand, ALeftID) then
+      Exit('An object cannot be in a room and carried at the same time.');
+
+    if (AKind = wckObjectCarried) and (C.Kind = wckObjectInRoom) and
+       SameText(C.LeftOperand, ALeftID) then
+      Exit('An object cannot be carried and in a room at the same time.');
+
+    if (AKind = wckPlayerCarryingObject) and
+       (C.Kind = wckObjectInRoom) and
+       SameText(C.LeftOperand, ARightID) then
+      Exit('An object cannot be carried by the player and in a room at the same time.');
+
+    if (AKind = wckObjectInRoom) and
+       (C.Kind = wckPlayerCarryingObject) and
+       SameText(C.RightOperand, ALeftID) then
+      Exit('An object cannot be in a room and carried by the player at the same time.');
+  end;
+end;
+
 procedure TWWRuleEditorForm.AddConditionButtonClick(Sender: TObject);
 var
   LeftID, RightID: string;
   Existing: TWorldCondition;
+  NewKind: TWorldConditionKind;
+  Conflict: string;
 begin
   if (FRule = nil) or (FWorld = nil) then Exit;
   LeftID := '';
@@ -219,13 +268,13 @@ begin
       begin
         if ConditionRightCombo.ItemIndex < 0 then Exit;
         RightID := FWorld.Rooms[ConditionRightCombo.ItemIndex].ID;
-        if Existing = nil then FRule.AddCondition(wckPlayerInRoom, '', RightID);
+        NewKind := wckPlayerInRoom;
       end;
     1:
       begin
         if ConditionRightCombo.ItemIndex < 0 then Exit;
         RightID := FWorld.Objects[ConditionRightCombo.ItemIndex].ID;
-        if Existing = nil then FRule.AddCondition(wckPlayerCarryingObject, '', RightID);
+        NewKind := wckPlayerCarryingObject;
       end;
     2:
       begin
@@ -233,28 +282,31 @@ begin
            (ConditionRightCombo.ItemIndex < 0) then Exit;
         LeftID := FWorld.Objects[ConditionLeftCombo.ItemIndex].ID;
         RightID := FWorld.Rooms[ConditionRightCombo.ItemIndex].ID;
-        if Existing = nil then FRule.AddCondition(wckObjectInRoom, LeftID, RightID);
+        NewKind := wckObjectInRoom;
       end;
     3:
       begin
         if ConditionLeftCombo.ItemIndex < 0 then Exit;
         LeftID := FWorld.Objects[ConditionLeftCombo.ItemIndex].ID;
-        if Existing = nil then FRule.AddCondition(wckObjectCarried, LeftID, '');
+        NewKind := wckObjectCarried;
       end;
     else
       Exit;
   end;
+  Conflict := ConditionConflict(NewKind, LeftID, RightID, Existing);
+  if Conflict <> '' then
+  begin
+    MessageDlg('Invalid Condition', Conflict, mtWarning, [mbOK], 0);
+    Exit;
+  end;
   if Existing <> nil then
   begin
-    case ConditionKindCombo.ItemIndex of
-      0: Existing.Kind := wckPlayerInRoom;
-      1: Existing.Kind := wckPlayerCarryingObject;
-      2: Existing.Kind := wckObjectInRoom;
-      3: Existing.Kind := wckObjectCarried;
-    end;
+    Existing.Kind := NewKind;
     Existing.LeftOperand := LeftID;
     Existing.RightOperand := RightID;
-  end;
+  end
+  else
+    FRule.AddCondition(NewKind, LeftID, RightID);
   AddConditionButton.Caption := 'Add Condition';
   RefreshRuleView;
 end;
