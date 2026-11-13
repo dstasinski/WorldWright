@@ -74,6 +74,33 @@ object WWRuleEditorForm: TWWRuleEditorForm
     OnClick = DeleteItemButtonClick
     TabOrder = 2
   end
+  object EditItemButton: TButton
+    Left = 264
+    Height = 34
+    Top = 50
+    Width = 120
+    Caption = 'Edit Selected'
+    OnClick = EditItemButtonClick
+    TabOrder = 7
+  end
+  object MoveUpButton: TButton
+    Left = 392
+    Height = 34
+    Top = 50
+    Width = 90
+    Caption = 'Move Up'
+    OnClick = MoveUpButtonClick
+    TabOrder = 8
+  end
+  object MoveDownButton: TButton
+    Left = 490
+    Height = 34
+    Top = 50
+    Width = 110
+    Caption = 'Move Down'
+    OnClick = MoveDownButtonClick
+    TabOrder = 9
+  end
   object CloseButton: TButton
     Left = 552
     Height = 34
