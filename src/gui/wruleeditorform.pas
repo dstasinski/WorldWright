@@ -20,6 +20,9 @@ type
     ConditionRightCombo: TComboBox;
     CloseButton: TButton;
     DeleteItemButton: TButton;
+    EditItemButton: TButton;
+    MoveUpButton: TButton;
+    MoveDownButton: TButton;
     ConditionsList: TListBox;
     ActionsList: TListBox;
     RuleTitleLabel: TLabel;
@@ -29,6 +32,9 @@ type
     procedure AddConditionButtonClick(Sender: TObject);
     procedure ConditionKindComboChange(Sender: TObject);
     procedure DeleteItemButtonClick(Sender: TObject);
+    procedure EditItemButtonClick(Sender: TObject);
+    procedure MoveUpButtonClick(Sender: TObject);
+    procedure MoveDownButtonClick(Sender: TObject);
     procedure ConditionsListClick(Sender: TObject);
     procedure ActionsListClick(Sender: TObject);
   private
@@ -38,6 +44,7 @@ type
     function EntityNameByID(const AID: string): string;
     procedure RefreshConditionChoices;
     procedure RefreshRuleView;
+    procedure MoveSelected(ADirection: Integer);
   public
     procedure EditRule(AWorld: TWorld; ARule: TWorldRule;
       ADefaultRoom: TWorldRoom);
@@ -197,23 +204,28 @@ end;
 procedure TWWRuleEditorForm.AddConditionButtonClick(Sender: TObject);
 var
   LeftID, RightID: string;
+  Existing: TWorldCondition;
 begin
   if (FRule = nil) or (FWorld = nil) then Exit;
   LeftID := '';
   RightID := '';
+  Existing := nil;
+  if (AddConditionButton.Caption = 'Update Condition') and
+     (ConditionsList.ItemIndex >= 0) then
+    Existing := FRule.Conditions[ConditionsList.ItemIndex];
 
   case ConditionKindCombo.ItemIndex of
     0:
       begin
         if ConditionRightCombo.ItemIndex < 0 then Exit;
         RightID := FWorld.Rooms[ConditionRightCombo.ItemIndex].ID;
-        FRule.AddCondition(wckPlayerInRoom, '', RightID);
+        if Existing = nil then FRule.AddCondition(wckPlayerInRoom, '', RightID);
       end;
     1:
       begin
         if ConditionRightCombo.ItemIndex < 0 then Exit;
         RightID := FWorld.Objects[ConditionRightCombo.ItemIndex].ID;
-        FRule.AddCondition(wckPlayerCarryingObject, '', RightID);
+        if Existing = nil then FRule.AddCondition(wckPlayerCarryingObject, '', RightID);
       end;
     2:
       begin
@@ -221,17 +233,29 @@ begin
            (ConditionRightCombo.ItemIndex < 0) then Exit;
         LeftID := FWorld.Objects[ConditionLeftCombo.ItemIndex].ID;
         RightID := FWorld.Rooms[ConditionRightCombo.ItemIndex].ID;
-        FRule.AddCondition(wckObjectInRoom, LeftID, RightID);
+        if Existing = nil then FRule.AddCondition(wckObjectInRoom, LeftID, RightID);
       end;
     3:
       begin
         if ConditionLeftCombo.ItemIndex < 0 then Exit;
         LeftID := FWorld.Objects[ConditionLeftCombo.ItemIndex].ID;
-        FRule.AddCondition(wckObjectCarried, LeftID, '');
+        if Existing = nil then FRule.AddCondition(wckObjectCarried, LeftID, '');
       end;
     else
       Exit;
   end;
+  if Existing <> nil then
+  begin
+    case ConditionKindCombo.ItemIndex of
+      0: Existing.Kind := wckPlayerInRoom;
+      1: Existing.Kind := wckPlayerCarryingObject;
+      2: Existing.Kind := wckObjectInRoom;
+      3: Existing.Kind := wckObjectCarried;
+    end;
+    Existing.LeftOperand := LeftID;
+    Existing.RightOperand := RightID;
+  end;
+  AddConditionButton.Caption := 'Add Condition';
   RefreshRuleView;
 end;
 
@@ -251,6 +275,98 @@ begin
     Exit;
   end;
   RefreshRuleView;
+end;
+
+{ Edit the selected semantic condition through the existing typed controls.
+  The selection is identified by list index; only stable entity IDs are stored. }
+procedure TWWRuleEditorForm.EditItemButtonClick(Sender: TObject);
+var
+  C: TWorldCondition;
+  A: TWorldAction;
+  Value: string;
+  I: Integer;
+begin
+  if FRule = nil then Exit;
+  if ConditionsList.ItemIndex >= 0 then
+  begin
+    C := FRule.Conditions[ConditionsList.ItemIndex];
+    case C.Kind of
+      wckPlayerInRoom: ConditionKindCombo.ItemIndex := 0;
+      wckPlayerCarryingObject: ConditionKindCombo.ItemIndex := 1;
+      wckObjectInRoom: ConditionKindCombo.ItemIndex := 2;
+      wckObjectCarried: ConditionKindCombo.ItemIndex := 3;
+    end;
+    RefreshConditionChoices;
+    if ConditionLeftCombo.Visible then
+      for I := 0 to FWorld.Objects.Count - 1 do
+        if SameText(FWorld.Objects[I].ID, C.LeftOperand) then
+          ConditionLeftCombo.ItemIndex := I;
+    if ConditionRightCombo.Visible then
+    begin
+      if ConditionKindCombo.ItemIndex in [0, 2] then
+      begin
+        for I := 0 to FWorld.Rooms.Count - 1 do
+          if SameText(FWorld.Rooms[I].ID, C.RightOperand) then
+            ConditionRightCombo.ItemIndex := I;
+      end
+      else
+        for I := 0 to FWorld.Objects.Count - 1 do
+          if SameText(FWorld.Objects[I].ID, C.RightOperand) then
+            ConditionRightCombo.ItemIndex := I;
+    end;
+    MessageDlg('Edit Condition',
+      'Choose the new values above, then use Update Condition.',
+      mtInformation, [mbOK], 0);
+    AddConditionButton.Caption := 'Update Condition';
+  end
+  else if ActionsList.ItemIndex >= 0 then
+  begin
+    A := FRule.Actions[ActionsList.ItemIndex];
+    Value := A.Value;
+    if InputQuery('Edit Say Action', 'Text to say:', Value) then
+    begin
+      A.Value := Value;
+      RefreshRuleView;
+    end;
+  end;
+end;
+
+{ Preserve order within each list. Never move an action across the
+  conditions/actions boundary. }
+procedure TWWRuleEditorForm.MoveSelected(ADirection: Integer);
+var
+  I, J: Integer;
+  IsCondition: Boolean;
+begin
+  if FRule = nil then Exit;
+  IsCondition := ConditionsList.ItemIndex >= 0;
+  if IsCondition then
+  begin
+    I := ConditionsList.ItemIndex;
+    J := I + ADirection;
+    if (J < 0) or (J >= FRule.Conditions.Count) then Exit;
+    FRule.Conditions.Exchange(I, J);
+  end
+  else
+  begin
+    I := ActionsList.ItemIndex;
+    J := I + ADirection;
+    if (I < 0) or (J < 0) or (J >= FRule.Actions.Count) then Exit;
+    FRule.Actions.Exchange(I, J);
+  end;
+  RefreshRuleView;
+  if IsCondition then ConditionsList.ItemIndex := J
+  else ActionsList.ItemIndex := J;
+end;
+
+procedure TWWRuleEditorForm.MoveUpButtonClick(Sender: TObject);
+begin
+  MoveSelected(-1);
+end;
+
+procedure TWWRuleEditorForm.MoveDownButtonClick(Sender: TObject);
+begin
+  MoveSelected(1);
 end;
 
 end.
