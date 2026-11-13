@@ -19,6 +19,7 @@ type
     ConditionLeftCombo: TComboBox;
     ConditionRightCombo: TComboBox;
     CloseButton: TButton;
+    CancelButton: TButton;
     DeleteItemButton: TButton;
     EditItemButton: TButton;
     MoveUpButton: TButton;
@@ -36,9 +37,11 @@ type
     procedure MoveUpButtonClick(Sender: TObject);
     procedure MoveDownButtonClick(Sender: TObject);
     procedure ConditionsListClick(Sender: TObject);
+    procedure CloseButtonClick(Sender: TObject);
     procedure ActionsListClick(Sender: TObject);
   private
     FRule: TWorldRule;
+    FOriginalRule: TWorldRule;
     FWorld: TWorld;
     FDefaultRoom: TWorldRoom;
     function EntityNameByID(const AID: string): string;
@@ -118,19 +121,51 @@ begin
   if ActionsList.ItemIndex >= 0 then ConditionsList.ItemIndex := -1;
 end;
 
+{ Work on a detached deep copy. The authored rule changes only when OK is
+  pressed; Cancel and window-close discard the draft automatically. }
 procedure TWWRuleEditorForm.EditRule(AWorld: TWorld; ARule: TWorldRule;
   ADefaultRoom: TWorldRoom);
+var
+  C: TWorldCondition;
+  A: TWorldAction;
 begin
-  if ARule = nil then
-    Exit;
+  if ARule = nil then Exit;
   FWorld := AWorld;
-  FRule := ARule;
+  FOriginalRule := ARule;
   FDefaultRoom := ADefaultRoom;
-  Caption := 'Rule Editor - ' + FRule.Name;
-  ConditionKindCombo.ItemIndex := 0;
-  RefreshConditionChoices;
-  RefreshRuleView;
-  ShowModal;
+  FRule := TWorldRule.Create(ARule.ID, ARule.Name);
+  try
+    for C in ARule.Conditions do
+      FRule.AddCondition(C.Kind, C.LeftOperand, C.RightOperand);
+    for A in ARule.Actions do
+      FRule.AddAction(A.Kind, A.Value);
+    Caption := 'Rule Editor - ' + FRule.Name;
+    ConditionKindCombo.ItemIndex := 0;
+    AddConditionButton.Caption := 'Add Condition';
+    RefreshConditionChoices;
+    RefreshRuleView;
+    ShowModal;
+  finally
+    FRule.Free;
+    FRule := nil;
+    FOriginalRule := nil;
+  end;
+end;
+
+procedure TWWRuleEditorForm.CloseButtonClick(Sender: TObject);
+var
+  C: TWorldCondition;
+  A: TWorldAction;
+begin
+  if (FRule = nil) or (FOriginalRule = nil) then Exit;
+  { Commit a complete draft only after author approval. }
+  FOriginalRule.Conditions.Clear;
+  FOriginalRule.Actions.Clear;
+  for C in FRule.Conditions do
+    FOriginalRule.AddCondition(C.Kind, C.LeftOperand, C.RightOperand);
+  for A in FRule.Actions do
+    FOriginalRule.AddAction(A.Kind, A.Value);
+  ModalResult := mrOk;
 end;
 
 procedure TWWRuleEditorForm.AddActionButtonClick(Sender: TObject);
