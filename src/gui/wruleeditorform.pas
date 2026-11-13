@@ -20,11 +20,17 @@ type
     ConditionRightCombo: TComboBox;
     CloseButton: TButton;
     DeleteItemButton: TButton;
-    RuleMemo: TMemo;
+    ConditionsList: TListBox;
+    ActionsList: TListBox;
+    RuleTitleLabel: TLabel;
+    ConditionsLabel: TLabel;
+    ActionsLabel: TLabel;
     procedure AddActionButtonClick(Sender: TObject);
     procedure AddConditionButtonClick(Sender: TObject);
     procedure ConditionKindComboChange(Sender: TObject);
     procedure DeleteItemButtonClick(Sender: TObject);
+    procedure ConditionsListClick(Sender: TObject);
+    procedure ActionsListClick(Sender: TObject);
   private
     FRule: TWorldRule;
     FWorld: TWorld;
@@ -53,6 +59,9 @@ begin
     if SameText(WorldObject.ID, AID) then Exit(WorldObject.Name);
 end;
 
+{ Rebuild the two selection lists from authored rule data. The list indices
+  correspond directly to their respective model collections; they are never
+  interpreted as a combined numbered list. }
 procedure TWWRuleEditorForm.RefreshRuleView;
 var
   I: Integer;
@@ -60,44 +69,44 @@ var
   RuleAction: TWorldAction;
   ConditionText, ActionText: string;
 begin
-  RuleMemo.Clear;
+  ConditionsList.Items.Clear;
+  ActionsList.Items.Clear;
   if FRule = nil then Exit;
-  RuleMemo.Lines.Add('RULE: ' + FRule.Name);
-  RuleMemo.Lines.Add('ID: ' + FRule.ID);
-  RuleMemo.Lines.Add('');
-  RuleMemo.Lines.Add('Conditions');
-  if FRule.Conditions.Count = 0 then
-    RuleMemo.Lines.Add('  (none)')
-  else
-    for I := 0 to FRule.Conditions.Count - 1 do
-    begin
-      Condition := FRule.Conditions[I];
-      case Condition.Kind of
-        wckPlayerInRoom:
-          ConditionText := 'Player is in ' + EntityNameByID(Condition.RightOperand);
-        wckPlayerCarryingObject:
-          ConditionText := 'Player is carrying ' + EntityNameByID(Condition.RightOperand);
-        wckObjectInRoom:
-          ConditionText := EntityNameByID(Condition.LeftOperand) + ' is in ' +
-            EntityNameByID(Condition.RightOperand);
-        wckObjectCarried:
-          ConditionText := EntityNameByID(Condition.LeftOperand) + ' is carried';
-      end;
-      RuleMemo.Lines.Add('  ' + IntToStr(I + 1) + '. ' + ConditionText);
+  RuleTitleLabel.Caption := FRule.Name + ' [' + FRule.ID + ']';
+  for I := 0 to FRule.Conditions.Count - 1 do
+  begin
+    Condition := FRule.Conditions[I];
+    case Condition.Kind of
+      wckPlayerInRoom:
+        ConditionText := 'Player is in ' + EntityNameByID(Condition.RightOperand);
+      wckPlayerCarryingObject:
+        ConditionText := 'Player is carrying ' + EntityNameByID(Condition.RightOperand);
+      wckObjectInRoom:
+        ConditionText := EntityNameByID(Condition.LeftOperand) + ' is in ' +
+          EntityNameByID(Condition.RightOperand);
+      wckObjectCarried:
+        ConditionText := EntityNameByID(Condition.LeftOperand) + ' is carried';
     end;
-  RuleMemo.Lines.Add('');
-  RuleMemo.Lines.Add('Actions');
-  if FRule.Actions.Count = 0 then RuleMemo.Lines.Add('  (none)')
-  else
-    for I := 0 to FRule.Actions.Count - 1 do
-    begin
-      RuleAction := FRule.Actions[I];
-      case RuleAction.Kind of
-        wakSay: ActionText := 'Say "' + RuleAction.Value + '"';
-      end;
-      RuleMemo.Lines.Add('  ' + IntToStr(FRule.Conditions.Count + I + 1) +
-        '. ' + ActionText);
+    ConditionsList.Items.Add(ConditionText);
+  end;
+  for I := 0 to FRule.Actions.Count - 1 do
+  begin
+    RuleAction := FRule.Actions[I];
+    case RuleAction.Kind of
+      wakSay: ActionText := 'Say "' + RuleAction.Value + '"';
     end;
+    ActionsList.Items.Add(ActionText);
+  end;
+end;
+
+procedure TWWRuleEditorForm.ConditionsListClick(Sender: TObject);
+begin
+  if ConditionsList.ItemIndex >= 0 then ActionsList.ItemIndex := -1;
+end;
+
+procedure TWWRuleEditorForm.ActionsListClick(Sender: TObject);
+begin
+  if ActionsList.ItemIndex >= 0 then ConditionsList.ItemIndex := -1;
 end;
 
 procedure TWWRuleEditorForm.EditRule(AWorld: TWorld; ARule: TWorldRule;
@@ -226,37 +235,19 @@ begin
   RefreshRuleView;
 end;
 
+{ Delete only an explicitly selected row. No ambiguous item-number prompt and
+  no mutation when neither collection has an active selection. }
 procedure TWWRuleEditorForm.DeleteItemButtonClick(Sender: TObject);
-var
-  ItemText: string;
-  ItemNumber, ConditionCount: Integer;
 begin
   if FRule = nil then Exit;
-  if (FRule.Conditions.Count = 0) and (FRule.Actions.Count = 0) then
-  begin
-    MessageDlg('Delete Rule Item', 'This rule has no items to delete.',
-      mtInformation, [mbOK], 0);
-    Exit;
-  end;
-  ItemText := '';
-  if not InputQuery('Delete Rule Item',
-    'Item number (conditions first, then actions):', ItemText) then Exit;
-  if not TryStrToInt(Trim(ItemText), ItemNumber) then
-  begin
-    MessageDlg('Delete Rule Item', 'Enter a valid item number.',
-      mtError, [mbOK], 0);
-    Exit;
-  end;
-  ConditionCount := FRule.Conditions.Count;
-  if (ItemNumber >= 1) and (ItemNumber <= ConditionCount) then
-    FRule.Conditions.Delete(ItemNumber - 1)
-  else if (ItemNumber > ConditionCount) and
-          (ItemNumber <= ConditionCount + FRule.Actions.Count) then
-    FRule.Actions.Delete(ItemNumber - ConditionCount - 1)
+  if ConditionsList.ItemIndex >= 0 then
+    FRule.Conditions.Delete(ConditionsList.ItemIndex)
+  else if ActionsList.ItemIndex >= 0 then
+    FRule.Actions.Delete(ActionsList.ItemIndex)
   else
   begin
-    MessageDlg('Delete Rule Item', 'That item number does not exist.',
-      mtError, [mbOK], 0);
+    MessageDlg('Delete Rule Item', 'Select a condition or action first.',
+      mtInformation, [mbOK], 0);
     Exit;
   end;
   RefreshRuleView;
