@@ -107,9 +107,19 @@ object WWRuleEditorForm: TWWRuleEditorForm
     Top = 478
     Width = 120
     Anchors = [akRight, akBottom]
-    Caption = 'Close'
-    ModalResult = 1
+    Caption = 'OK'
+    OnClick = CloseButtonClick
     TabOrder = 4
+  end
+  object CancelButton: TButton
+    Left = 424
+    Height = 34
+    Top = 478
+    Width = 120
+    Anchors = [akRight, akBottom]
+    Caption = 'Cancel'
+    ModalResult = 2
+    TabOrder = 10
   end
   object RuleTitleLabel: TLabel
     Left = 8
